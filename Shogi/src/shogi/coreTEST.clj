@@ -140,23 +140,6 @@
 (def row (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
 (def board (sorted-map 1 row 2 row 3 row 4 row 5 row 6 row 7 row 8 row 9 row))
 
-(defn create-pieces
-  "Function to instantiate Piece Types.  Creates the specified number of Pieces, of
-   the specified Type, distributed evenly between the two players' ownership."
-  [[type amount]]
-  (loop [index 1]
-    (do
-      (eval `(def ~(symbol (str (get type :name) index)) {:owner -1 :type type}))
-      (eval `(def ~(symbol (str (get type :name) (inc index))) {:owner 1 :type type}))
-      (if (< index amount)
-        (recur (+ 2 index))))))
-
-(defn create-mass-pieces
-  "Function to call create-pieces on a list of Type-Amount pairs, suitable for
-   initializing the Board at start of game."
-  [list-of-pairs]
-  (map create-pieces list-of-pairs))
-
 
 
 ;; *****************************************************************************************
@@ -298,14 +281,14 @@
                         [move-backward 1]
                         [move-diagonal 1]]
                 :is-promotable false
-                :promotion `king-type
+                :promotion king-type
                 :name "King"})
 
 (def rook-type {:moves [[move-horizontal 9]
                         [move-forward 9]
                         [move-backward 9]]
                 :is-promotable true
-                :promotion `promoted-rook-type
+                :promotion promoted-rook-type
                 :name "Rook"})
 
 (def promoted-rook-type {:moves [[move-horizontal 1]
@@ -313,12 +296,12 @@
                                  [move-backward 1]
                                  [move-diagonal 9]]
                 :is-promotable false
-                :promotion `rook-type
+                :promotion rook-type
                 :name "PromotedRook"})
 
 (def bishop-type {:moves [[move-diagonal 9]]
                 :is-promotable true
-                :promotion `promoted-bishop-type
+                :promotion promoted-bishop-type
                 :name "Bishop"})
 
 (def promoted-bishop-type {:moves [[move-horizontal 1]
@@ -326,7 +309,7 @@
                                    [move-backward 1]
                                    [move-diagonal 9]]
                 :is-promotable false
-                :promotion `bishop-type
+                :promotion bishop-type
                 :name "PromotedBishop"})
 
 (def gold-general-type {:moves [[move-horizontal 1]
@@ -334,13 +317,13 @@
                                 [move-backward 1]
                                 [move-diagonal-forward 1]]
                 :is-promotable false
-                :promotion `gold-general-type
+                :promotion gold-general-type
                 :name "GoldGeneral"})
 
 (def silver-general-type {:moves [[move-forward 1]
                                   [move-diagonal 1]]
                 :is-promotable true
-                :promotion `promoted-silver-general-type
+                :promotion promoted-silver-general-type
                 :name "SilverGeneral"})
 
 (def promoted-silver-general-type {:moves [[move-horizontal 1]
@@ -348,12 +331,12 @@
                                            [move-backward 1]
                                            [move-diagonal-forward 1]]
                 :is-promotable false
-                :promotion `silver-general-type
+                :promotion silver-general-type
                 :name "PromotedSilverGeneral"})
 
 (def knight-type {:moves [[move-jump 1]]
                 :is-promotable true
-                :promotion `promoted-knight-type
+                :promotion promoted-knight-type
                 :name "Knight"})
 
 (def promoted-knight-type {:moves [[move-horizontal 1]
@@ -361,12 +344,12 @@
                                    [move-backward 1]
                                    [move-diagonal-forward 1]]
                 :is-promotable false
-                :promotion `knight-type
+                :promotion knight-type
                 :name "PromotedKnight"})
 
 (def lance-type {:moves [[move-forward 9]]
                 :is-promotable true
-                :promotion `promoted-lance-type
+                :promotion promoted-lance-type
                 :name "Lance"})
 
 (def promoted-lance-type {:moves [[move-horizontal 1]
@@ -379,7 +362,7 @@
 
 (def pawn-type {:moves [[move-forward 1]]
                 :is-promotable true
-                :promotion `promoted-pawn-type
+                :promotion promoted-pawn-type
                 :name "Pawn"})
 
 (def promoted-pawn-type {:moves [[move-horizontal 1]
@@ -387,7 +370,7 @@
                                  [move-backward 1]
                                  [move-diagonal-forward 1]]
                 :is-promotable false
-                :promotion `pawn-type
+                :promotion pawn-type
                 :name "PromotedPawn"})
 
 
@@ -395,18 +378,37 @@
 ;; Type Definition and Initialization:
 ;; ---------------------------------------------
 
+(defn create-pieces
+  "Function to instantiate Piece Types.  Creates the specified number of Pieces, of
+   the specified Type, distributed evenly between the two players' ownership.
+   NOTE: a Piece has: :owner and :type"
+  [[type amount]]
+  (loop [index 1]
+    (do
+      (eval `(def ~(symbol (str (get type :name) index)) {:owner -1 :type type}))
+      (eval `(def ~(symbol (str (get type :name) (inc index))) {:owner 1 :type type}))
+      (if (< index amount)
+        (recur (+ 2 index))))))
+
+(defn create-mass-pieces
+  "Function to call create-pieces on a list of Type-Amount pairs, suitable for
+   initializing the Board at start of game."
+  [list-of-pairs]
+  (map create-pieces list-of-pairs))
+
 (defn initialize-pieces
-  "This function creates all starting pieces."
+  "This function creates all starting pieces at once, but they still have to be placed
+   on the board."
   []
   (create-mass-pieces
- [[king-type 2]
-  [rook-type 2]
-  [bishop-type 2]
-  [gold-general-type 4]
-  [silver-general-type 4]
-  [knight-type 4]
-  [lance-type 4]
-  [pawn-type 18]]))
+   [[king-type 2]
+    [rook-type 2]
+    [bishop-type 2]
+    [gold-general-type 4]
+    [silver-general-type 4]
+    [knight-type 4]
+    [lance-type 4]
+    [pawn-type 18]]))
 
 
 ;; Player Definition and Initialization:
@@ -438,8 +440,16 @@
                       5 King1 6 GoldGeneral3 7 SilverGeneral3 8 Knight3 9 Lance3))
 
 
-(def board (sorted-map 1 row1 2 row2 3 row3 4 row4 5 row5 6 row6 7 row7 8 row8 9 row9
-                       :player1 player1 :player2 player2 :hand1 hand1 :hand2 hand2))
+(def board (sorted-map 1 row1 2 row2 3 row3 4 row4 5 row5 6 row6 7 row7 8 row8 9 row9))
 
 
 (def game (hash-map :board board :turn turn))
+
+
+
+
+
+;; *****************************************************************************************
+;; Movement:
+;; *****************************************************************************************
+
