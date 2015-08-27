@@ -414,6 +414,9 @@
 
 (def player1 {:player -1})
 (def player2 {:player 1})
+(def hand1 {})
+(def hand2 {})
+(def turn player1)
 
 
 
@@ -435,5 +438,8 @@
                       5 King1 6 GoldGeneral3 7 SilverGeneral3 8 Knight3 9 Lance3))
 
 
-(def board (sorted-map 1 row1 2 row2 3 row3 4 row4 5 row5 6 row6 7 row7 8 row8 9 row9))
+(def board (sorted-map 1 row1 2 row2 3 row3 4 row4 5 row5 6 row6 7 row7 8 row8 9 row9
+                       :player1 player1 :player2 player2 :hand1 hand1 :hand2 hand2))
 
+
+(def game (hash-map :board board :turn turn))
