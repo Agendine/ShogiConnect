@@ -173,7 +173,7 @@
   ;; If the current space is on-board, continue, else end checking in this direction.
   (if (is-on-board origin-x origin-y)
     ;; If the piece has enough movement for the distance, continue, else end
-    (if (<= 0 remaining)
+    (if (< 0 remaining)
       ;; If the current space is unoccupied, then proceed on this direction, else
       ;;    check if it's player's or opponent's and handle:
       (if (= (get-in board [origin-y origin-x]) nil)
@@ -184,11 +184,8 @@
              (into further-moves [[origin-x origin-y]]))
         ;; If the space is occupied by Player's Piece, stop checking this direction, else
         ;; handle as either capturable Piece or Check/Checkmate
-        (if (= (get (get-in board [origin-y origin-x]) :owner) player)
+        (if (= (get-in board [origin-y origin-x :owner]) player)
           []
-          ;; (TODO: )If the opponent's piece is a King, indicate Check
-          ;;        (TODO: CHECK CHECKMATE),
-          ;; else simply indicate it as a valid move and stop checking this direction
           ;;        (TODO: INDICATE CAPTURABLE SEPERATELY)
           [[origin-x origin-y]]))
       [])
@@ -210,10 +207,18 @@
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
-  (let [available-moves-left (into (move-direction [-1 -1 origin-x origin-y spaces player])
-                            (move-direction [-1 1 origin-x origin-y spaces player]))
-        available-moves-right (into (move-direction [1 -1 origin-x origin-y spaces player])
-                                       (move-direction [1 1 origin-x origin-y spaces player]))]
+  (let [available-moves-left (into (move-direction [-1 -1
+                                                    (- origin-x 1) (- origin-y 1)
+                                                    spaces player])
+                                   (move-direction [-1 1
+                                                    (- origin-x 1) (+ origin-y 1)
+                                                    spaces player]))
+        available-moves-right (into (move-direction [1 -1
+                                                     (+ origin-x 1) (- origin-y 1)
+                                                     spaces player])
+                                    (move-direction [1 1
+                                                     (+ origin-x 1) (+ origin-y 1)
+                                                     spaces player]))]
   (remove #(= % [origin-x origin-y]) (into available-moves-left available-moves-right))))
 
 (defn move-diagonal-forward
@@ -221,8 +226,12 @@
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
-  (let [available-moves-left (move-direction [-1 1 origin-x origin-y spaces player])
-        available-moves-right (move-direction [1 1 origin-x origin-y spaces player])]
+  (let [available-moves-left (move-direction [-1 player
+                                              (- origin-x 1) (+ player origin-y)
+                                              spaces player])
+        available-moves-right (move-direction [1 player
+                                              (+ origin-x 1) (+ player origin-y)
+                                               spaces player])]
     (remove #(= % [origin-x origin-y]) (into available-moves-left available-moves-right))))
 
 
@@ -231,16 +240,18 @@
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
-    (remove #(= % [origin-x origin-y]) (move-direction [0 (* player 1) origin-x origin-y
-                                                              spaces player])))
+  (remove #(= % [origin-x origin-y]) (move-direction [0 player
+                                                      origin-x (+ player origin-y)
+                                                      spaces player])))
 
 (defn move-backward
   "Function for handling the fact that this piece can move backward (relative to owner),
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
-  (remove #(= % [origin-x origin-y]) (move-direction [0 (* player -1) origin-x origin-y
-                                                      spaces])))
+  (remove #(= % [origin-x origin-y]) (move-direction [0 (* player -1)
+                                                      origin-x (- origin-y player)
+                                                      spaces player])))
 
 (defn move-single-space [origin-x origin-y player]
   "Utility function, primarily for move-jump, to apply the tests for move legality to a single
@@ -405,10 +416,10 @@
   [[piece-type piece-amount]]
   (loop [index 1]
     (do
-      (eval `(def ~(symbol (str (piece-type :name) index)) {:owner -1 :type ~piece-type}))
-      (eval `(def ~(symbol (str (piece-type :name) (inc index))) {:owner 1 :type ~piece-type}))
+      (eval `(def ~(symbol (str (piece-type :name) index)) {:owner 1 :type ~piece-type}))
+      (eval `(def ~(symbol (str (piece-type :name) (+ 1 index))) {:owner -1 :type ~piece-type}))
       (if (< index piece-amount)
-        (recur (inc index))))))
+        (recur (+ 2 index))))))
 
 (defn create-mass-pieces
   "Function to call create-pieces on a list of Type-Amount pairs, suitable for
@@ -464,28 +475,30 @@
   "Function to set up the board for the initial gamestate.  Initializes all starting pieces,
    and sets up the board with each piece in its proper starting place.
    Also defines the board object and the game which containts that board.
-   Note that these are all, essentially, global variables."
+   Note that these are all, essentially, global variables, but also all are
+   ultimately contained, hierarchically, under the game map."
   []
-  (initialize-pieces)
-  (def row1 (sorted-map 1 Lance4 2 Knight4 3 SilverGeneral4 4 GoldGeneral4
-                        5 King2 6 GoldGeneral2 7 SilverGeneral2 8 Knight2 9 Lance2))
-  (def row2 (sorted-map 1 nil 2 Rook2 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop2 9 nil))
-  (def row3 (sorted-map 1 Pawn10 2 Pawn12 3 Pawn14 4 Pawn16 5 Pawn18 6 Pawn2 7 Pawn4
-                        8 Pawn6 9 Pawn8))
-  (def row4 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-  (def row5 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-  (def row6 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-  (def row7 (sorted-map 1 Pawn1 2 Pawn3 3 Pawn5 4 Pawn7 5 Pawn9 6 Pawn11 7 Pawn13
-                        8 Pawn15 9 Pawn17))
-  (def row8 (sorted-map 1 nil 2 Rook1 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop1 9 nil))
-  (def row9 (sorted-map 1 Lance1 2 Knight1 3 SilverGeneral1 4 GoldGeneral1
-                        5 King1 6 GoldGeneral3 7 SilverGeneral3 8 Knight3 9 Lance3))
+  (do
+    (initialize-pieces)
+    (def row9 (sorted-map 1 Lance4 2 Knight4 3 SilverGeneral4 4 GoldGeneral4
+                          5 King2 6 GoldGeneral2 7 SilverGeneral2 8 Knight2 9 Lance2))
+    (def row8 (sorted-map 1 nil 2 Rook2 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop2 9 nil))
+    (def row7 (sorted-map 1 Pawn10 2 Pawn12 3 Pawn14 4 Pawn16 5 Pawn18 6 Pawn2 7 Pawn4
+                          8 Pawn6 9 Pawn8))
+    (def row6 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
+    (def row5 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
+    (def row4 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
+    (def row3 (sorted-map 1 Pawn1 2 Pawn3 3 Pawn5 4 Pawn7 5 Pawn9 6 Pawn11 7 Pawn13
+                          8 Pawn15 9 Pawn17))
+    (def row2 (sorted-map 1 nil 2 Rook1 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop1 9 nil))
+    (def row1 (sorted-map 1 Lance1 2 Knight1 3 SilverGeneral1 4 GoldGeneral1
+                          5 King1 6 GoldGeneral3 7 SilverGeneral3 8 Knight3 9 Lance3))
 
-  (def board (sorted-map 1 row1 2 row2 3 row3 4 row4 5 row5 6 row6 7 row7 8 row8 9 row9))
-  (def game (hash-map :board board :turn turn)))
+    (def board (sorted-map 1 row1 2 row2 3 row3 4 row4 5 row5 6 row6 7 row7 8 row8 9 row9))
+    (def game (hash-map :board board :turn turn))))
 
 
-
+(setup-board)
 
 
 
@@ -493,3 +506,5 @@
 ;; Movement:
 ;; *****************************************************************************************
 
+;; Query to return a space's piece's first movement option
+;; (get-in board [3 2 :type :moves 0 0])
