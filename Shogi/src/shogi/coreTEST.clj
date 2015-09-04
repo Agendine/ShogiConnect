@@ -636,3 +636,22 @@
 ;;           (recur (inc x-coord)))))
 ;;     (if (< y-coord 10)
 ;;       (recur (inc y-coord))))
+
+
+(defn is-in-check?
+  "TESTING: DRAFT: simple boolean result for whether any of the opposing player's pieces have
+   the parameter player's king as an available move.
+  NOTE: DOES NOT conduct secondary checks to determine if those moves
+                 can be completed legally (yet).  For example, it will not notice that
+                 capture could only be attempted by putting oneself in check."
+;;   [player]
+;;   (let [[king-x king-y] (locate-king player)
+;;         opposing-player ((get-other-player player) :player)]
+;;     (some #(= [king-x king-y] %) (query-all-moves-for-player opposing-player))))
+;; 
+;; (defn is-in-check?
+   [player]
+  (let [[king-x king-y] (locate-king player)
+        opposing-player ((get-other-player player) :player)]
+    (is-space-reachable-by-player? king-x king-y opposing-player)))
+
