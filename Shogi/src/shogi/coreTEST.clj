@@ -57,6 +57,17 @@
 ;;
 ;; Board:  A Board is:
 ;;         A 9x9 matric of "Spaces", each of which can either be "Empty" or contain a "Piece".
+;;               The board is laid out as follows:
+;;
+;;                 Row
+;;                  9
+;;                  8                Note that the coordinates are 1-based (for easy
+;;                  .                 transcription) and labelled XY-style, increasing
+;;                  .                 bottom-to-top and left-to-right.
+;;                  .
+;;                  1  Col 1 2 3 ... 9
+;;
+;;
 ;;         2 "Players",
 ;;         2 "Hands", one for each player (a set of captured
 ;;         Pieces, playable as per the rules).
@@ -137,8 +148,7 @@
 ;; Utility Functions For Board Setup
 ;; ---------------------------------------------
 
-(def row (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-(def board (sorted-map 1 row 2 row 3 row 4 row 5 row 6 row 7 row 8 row 9 row))
+(declare board)
 
 
 
@@ -176,7 +186,7 @@
     (if (< 0 remaining)
       ;; If the current space is unoccupied, then proceed on this direction, else
       ;;    check if it's player's or opponent's and handle:
-      (if (= (get-in board [origin-y origin-x]) nil)
+      (if (= (get-in board [origin-x origin-y]) nil)
         (let [further-moves  (move-direction
                                [direction-x direction-y
                                 (+ direction-x origin-x) (+ direction-y origin-y)
@@ -184,7 +194,7 @@
              (into further-moves [[origin-x origin-y]]))
         ;; If the space is occupied by Player's Piece, stop checking this direction, else
         ;; handle as either capturable Piece or Check/Checkmate
-        (if (= (get-in board [origin-y origin-x :owner]) player)
+        (if (= (get-in board [origin-x origin-y :owner]) player)
           []
           ;;        (TODO: INDICATE CAPTURABLE SEPERATELY)
           [[origin-x origin-y]]))
@@ -404,11 +414,6 @@
 ;; Type Definition and Initialization:
 ;; ---------------------------------------------
 
-(defn test-cr-piece1
-  "TEST base unit of piece creation function"
-  [this-type]
-  (eval `(def ~(symbol (str (this-type :name) 10)) {:owner -1 :type ~this-type})))
-
 (defn create-pieces
   "Function to instantiate Piece Types.  Creates the specified number of Pieces, of
    the specified Type, distributed evenly between the two players' ownership.
@@ -442,20 +447,34 @@
     [pawn-type 18]]))
 
 
-(defn test-pretty-print
-  "DRAFT: Development method for pretty-printing the board."
+(defn test-pretty-print2
+  "DRAFT: Development method for pretty-printing the board.
+   DEPRECATED: this one works with a (row col) based lookup system."
   []
   (map (fn [arg1]
          (println (apply str
                          (map #(if (nil?
-                                    (get-in(eval (read-string (str "row" arg1)))
+                                    (get-in(eval (read-string (str "col" arg1)))
                                            [% :type :name]))
                                  (str "     | ")
                                  (str
-                                  (get-in (eval (read-string (str "row" arg1))) [% :type :name])
+                                  (get-in (eval (read-string (str "col" arg1))) [% :type :name])
                                           " | "))
                               (range 1 10)))))
        (range 1 10)))
+
+(defn test-pretty-print
+  "DRAFT 2: Development method for pretty-printing the board.
+  This one is adjusted for the (x y) coordinate lookup system."
+  []
+  (map (fn [arg1]
+         (println (apply str
+                         (map #(if (nil? (get-in board [% arg1 :type :name]))
+                                 (str "     | ")
+                                 (str (get-in board [% arg1 :type :name]) " | "))
+                              (range 1 10)))))
+       (range 1 10)))
+
 
 ;; Player Definition and Initialization:
 ;; ---------------------------------------------
@@ -480,21 +499,32 @@
   []
   (do
     (initialize-pieces)
-    (def row9 (sorted-map 1 Lance4 2 Knight4 3 SilverGeneral4 4 GoldGeneral4
-                          5 King2 6 GoldGeneral2 7 SilverGeneral2 8 Knight2 9 Lance2))
-    (def row8 (sorted-map 1 nil 2 Rook2 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop2 9 nil))
-    (def row7 (sorted-map 1 Pawn10 2 Pawn12 3 Pawn14 4 Pawn16 5 Pawn18 6 Pawn2 7 Pawn4
-                          8 Pawn6 9 Pawn8))
-    (def row6 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-    (def row5 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-    (def row4 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-    (def row3 (sorted-map 1 Pawn1 2 Pawn3 3 Pawn5 4 Pawn7 5 Pawn9 6 Pawn11 7 Pawn13
-                          8 Pawn15 9 Pawn17))
-    (def row2 (sorted-map 1 nil 2 Rook1 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop1 9 nil))
-    (def row1 (sorted-map 1 Lance1 2 Knight1 3 SilverGeneral1 4 GoldGeneral1
-                          5 King1 6 GoldGeneral3 7 SilverGeneral3 8 Knight3 9 Lance3))
 
-    (def board (sorted-map 1 row1 2 row2 3 row3 4 row4 5 row5 6 row6 7 row7 8 row8 9 row9))
+;;     (def row9 (sorted-map 1 Lance4 2 Knight4 3 SilverGeneral4 4 GoldGeneral4
+;;                           5 King2 6 GoldGeneral2 7 SilverGeneral2 8 Knight2 9 Lance2))
+;;     (def row8 (sorted-map 1 nil 2 Rook2 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop2 9 nil))
+;;     (def row7 (sorted-map 1 Pawn10 2 Pawn12 3 Pawn14 4 Pawn16 5 Pawn18 6 Pawn2 7 Pawn4
+;;                           8 Pawn6 9 Pawn8))
+;;     (def row6 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
+;;     (def row5 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
+;;     (def row4 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
+;;     (def row3 (sorted-map 1 Pawn1 2 Pawn3 3 Pawn5 4 Pawn7 5 Pawn9 6 Pawn11 7 Pawn13
+;;                           8 Pawn15 9 Pawn17))
+;;     (def row2 (sorted-map 1 nil 2 Rook1 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop1 9 nil))
+;;     (def row1 (sorted-map 1 Lance1 2 Knight1 3 SilverGeneral1 4 GoldGeneral1
+;;                           5 King1 6 GoldGeneral3 7 SilverGeneral3 8 Knight3 9 Lance3))
+
+    (def col1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2 8 nil  9 Lance4))
+    (def col2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4 8 Bishop2 9 Knight4))
+    (def col3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6 8 nil  9 SilverGeneral4))
+    (def col4 (sorted-map 1 GoldGeneral1 2 nil 3 Pawn7 4 nil 5 nil 6 nil 7 Pawn8 8 nil 9 GoldGeneral2))
+    (def col5 (sorted-map 1 King1 2 nil 3 Pawn9 4 nil 5 nil 6 nil 7 Pawn10 8 nil  9 King2))
+    (def col6 (sorted-map 1 GoldGeneral3 2 nil 3 Pawn11 4 nil 5 nil 6 nil 7 Pawn12 8 nil 9 GoldGeneral4))
+    (def col7 (sorted-map 1 SilverGeneral3 2 nil 3 Pawn13 4 nil 5 nil 6 nil 7 Pawn14 8 nil 9 SilverGeneral4))
+    (def col8 (sorted-map 1 Knight3 2 Bishop1 3 Pawn15 4 nil 5 nil 6 nil 7 Pawn16 8 Rook2 9 Knight4))
+    (def col9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18 8 nil 9 Lance4))
+
+    (def board (sorted-map 1 col1 2 col2 3 col3 4 col4 5 col5 6 col6 7 col7 8 col8 9 col9))
     (def game (hash-map :board board :turn turn))))
 
 
