@@ -208,9 +208,7 @@
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
   (let [available-moves (move-direction [-1 0 origin-x origin-y spaces player])]
-    (remove #(= % [origin-x origin-y]) (into (move-direction [1 0 origin-x origin-y
-                                                             spaces player])
-                                            available-moves))))
+   (into (move-direction [1 0 origin-x origin-y spaces player]) available-moves)))
 
 (defn move-diagonal
   "Function for handling the fact that this piece can move in 4 diagonal directions,
@@ -229,7 +227,7 @@
                                     (move-direction [1 1
                                                      (+ origin-x 1) (+ origin-y 1)
                                                      spaces player]))]
-  (remove #(= % [origin-x origin-y]) (into available-moves-left available-moves-right))))
+    (into available-moves-left available-moves-right)))
 
 (defn move-diagonal-forward
   "Function for handling the fact that this piece can move in 2 diagonal directions,
@@ -242,7 +240,7 @@
         available-moves-right (move-direction [1 player
                                               (+ origin-x 1) (+ player origin-y)
                                                spaces player])]
-    (remove #(= % [origin-x origin-y]) (into available-moves-left available-moves-right))))
+    (into available-moves-left available-moves-right)))
 
 
 (defn move-forward
@@ -250,40 +248,22 @@
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
-  (remove #(= % [origin-x origin-y]) (move-direction [0 player
-                                                      origin-x (+ player origin-y)
-                                                      spaces player])))
+  (move-direction [0 player origin-x (+ player origin-y) spaces player]))
 
 (defn move-backward
   "Function for handling the fact that this piece can move backward (relative to owner),
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
-  (remove #(= % [origin-x origin-y]) (move-direction [0 (* player -1)
-                                                      origin-x (- origin-y player)
-                                                      spaces player])))
-
-(defn move-single-space [origin-x origin-y player]
-  "Utility function, primarily for move-jump, to apply the tests for move legality to a single
-   space, rather than a series of spaces."
-  (if (is-on-board origin-x origin-y)
-    (if (= (get-in board [origin-y origin-x]) nil)
-      [origin-x origin-y]
-      (if (= (get (get-in board [origin-y origin-x]) :owner) player)
-        []
-        [origin-x origin-y]))
-    []))
+  (move-direction [0 (* player -1) origin-x (- origin-y player) spaces player]))
 
 (defn move-jump
   "Function for handling Knights' ability to move by jumping to spaces.
-   Mimics move-direction, but simplified for the situation.
    NOTE: the spaces parameter is kept, but not used, to ease generic movement-function calling.
    Returns a list of available jumps, or an empty vector if none are available."
-  [_ origin-x origin-y player]
-  (let [accumulator (vector (move-single-space (+ origin-x 1) (+ origin-y (* 2 player)) player))]
-    (remove #(= % [origin-x origin-y])
-            (into accumulator (vector (move-single-space (- origin-x 1)
-                                                         (+ origin-y (* 2 player)) player))))))
+  [spaces origin-x origin-y player]
+  (into (move-direction [1 1 (+ origin-x 1) (+ origin-y (* 2 player)) 1 player])
+        (move-direction [1 1 (- origin-x 1) (+ origin-y (* 2 player)) 1 player])))
 
 
 
@@ -393,8 +373,8 @@
                                   [move-backward 1]
                                   [move-diagonal-forward 1]]
                 :is-promotable false
-                :promotion 'knight-type
-                :name "PromotedKnight"})
+                :promotion 'lance-type
+                :name "PromotedLance"})
 
 (def pawn-type {:moves [[move-forward 1]]
                 :is-promotable true
@@ -463,7 +443,7 @@
                               (range 1 10)))))
        (range 1 10)))
 
-(defn test-pretty-print
+(defn pretty-print
   "DRAFT 2: Development method for pretty-printing the board.
   This one is adjusted for the (x y) coordinate lookup system."
   []
@@ -475,15 +455,6 @@
                               (range 1 10)))))
        (range 1 10)))
 
-
-;; Player Definition and Initialization:
-;; ---------------------------------------------
-()
-(def hand1 {})
-(def hand2 {})
-(def player1 {:player -1 :hand hand1})
-(def player2 {:player 1 :hand hand2})
-(def turn player1)
 
 
 
@@ -500,20 +471,6 @@
   (do
     (initialize-pieces)
 
-;;     (def row9 (sorted-map 1 Lance4 2 Knight4 3 SilverGeneral4 4 GoldGeneral4
-;;                           5 King2 6 GoldGeneral2 7 SilverGeneral2 8 Knight2 9 Lance2))
-;;     (def row8 (sorted-map 1 nil 2 Rook2 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop2 9 nil))
-;;     (def row7 (sorted-map 1 Pawn10 2 Pawn12 3 Pawn14 4 Pawn16 5 Pawn18 6 Pawn2 7 Pawn4
-;;                           8 Pawn6 9 Pawn8))
-;;     (def row6 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-;;     (def row5 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-;;     (def row4 (sorted-map 1 nil 2 nil 3 nil 4 nil 5 nil 6 nil 7 nil 8 nil 9 nil))
-;;     (def row3 (sorted-map 1 Pawn1 2 Pawn3 3 Pawn5 4 Pawn7 5 Pawn9 6 Pawn11 7 Pawn13
-;;                           8 Pawn15 9 Pawn17))
-;;     (def row2 (sorted-map 1 nil 2 Rook1 3 nil 4 nil 5 nil 6 nil 7 nil 8 Bishop1 9 nil))
-;;     (def row1 (sorted-map 1 Lance1 2 Knight1 3 SilverGeneral1 4 GoldGeneral1
-;;                           5 King1 6 GoldGeneral3 7 SilverGeneral3 8 Knight3 9 Lance3))
-
     (def col1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2 8 nil  9 Lance4))
     (def col2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4 8 Bishop2 9 Knight4))
     (def col3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6 8 nil  9 SilverGeneral4))
@@ -525,10 +482,35 @@
     (def col9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18 8 nil 9 Lance4))
 
     (def board (sorted-map 1 col1 2 col2 3 col3 4 col4 5 col5 6 col6 7 col7 8 col8 9 col9))
-    (def game (hash-map :board board :turn turn))))
+
+    (def hand1 [])
+    (def hand2 [])
+    (def player1 {:player -1 :hand hand1 :in-check? false})
+    (def player2 {:player 1 :hand hand2 :in-check? false})
+    (def turn player1)
+
+    (def game (hash-map :board board :turn turn -1 player1 1 player2))))
 
 
-(setup-board)
+(defn update-game
+  "IMPORTANT: This function can be called at any time to update the game object to store the
+   current state of the board, player-hands, turn counter, etc.
+  THIS MUST BE CALLED AFTER EVERY TURN, before storing the game to JSON!"
+  []
+  (def game (hash-map :board board :turn turn -1 player1 1 player2)))
+
+
+;; Player and Board Resets (for development):
+;; ---------------------------------------------
+
+(defn reset-hands
+  []
+  (def hand1 [])
+  (def hand2 [])
+  (def player1 {:player -1 :hand hand1 :in-check? false})
+  (def player2 {:player 1 :hand hand2 :in-check? false})
+  (def turn player1)
+  (update-game))
 
 
 
@@ -536,5 +518,121 @@
 ;; Movement:
 ;; *****************************************************************************************
 
-;; Query to return a space's piece's first movement option
-;; (get-in board [3 2 :type :moves 0 0])
+(defn get-other-player
+  "Quick utility function to return a reference to the actual Player map opposite the parameter
+   Player. Useful for quickly obtaining the other player's Hand."
+  [player]
+  (if (= player (player1 :player))
+    player2
+    player1))
+
+(defn query-all-moves
+  "DRAFT: function to aggregate all open moves from all movement methods of
+  an unknown piece, queried by board position.  NOTE: THESE RESULTS ARE RAW! Does NOT exclude
+  moves for moving into check or other secondary rules violations."
+  [piece-x piece-y]
+  (distinct (reduce into (map
+                          (fn [[move-function num-spaces]]
+                            (move-function num-spaces
+                                           piece-x piece-y
+                                           (get-in board [piece-x piece-y :owner])))
+                          (get-in board [piece-x piece-y :type :moves])))))
+
+(defn query-all-moves-for-player
+  "Function aggregates all possible spaces to which the parameter player's pieces could move
+  semi-legally.
+  NOTE THAT THIS IS RAW DATA!  Secondary-rules violations, such as moving into check, are NOT checked
+  at this stage.  All moves in the output vector are distinct, but are not matched to any particular
+  moving piece."
+  [player]
+  (remove #(= [] %) (distinct
+                     (reduce into
+                             (map (fn [y-coord]
+                                    (reduce into (map
+                                                  (fn [x-coord] (if (= (get-in board [x-coord
+                                                                                      y-coord
+                                                                                      :owner])
+                                                                       player)
+                                                                  (query-all-moves x-coord y-coord)
+                                                                  []))
+                                                  (range 1 10))))
+                                  (range 1 10))))))
+
+
+(defn is-space-reachable-by-player?
+  "Returns boolean result for whether any of the specified player's pieces could semi-legally
+   reach the specified board space."
+  [x-coord y-coord player]
+  (some #(= [x-coord y-coord] %) (query-all-moves-for-player player)))
+
+(defn is-space-reachable-by-piece?
+  "Returns boolean result for whether a specified piece could (semi-)legally
+   reach the specified board space."
+  [from-x from-y to-x to-y]
+  (some #(= [to-x to-y] %) (query-all-moves from-x from-y)))
+
+(defn capture-piece
+       "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
+               and exchanging ownership of the piece.  Only call this function when capture
+               has already been verified for legality.  This function assumes that the proper
+               player is performing the capture.
+   TODO LATER: De-promote as well.
+               Test more thoroughly, particularly that both game and board update properly."
+       [captured-x captured-y]
+       (do
+         (if (= (get-in board [captured-x captured-y :owner]) (player2 :player))
+           (def player1
+             (assoc player1 :hand (conj (player1 :hand)
+                                        (assoc (get-in board [captured-x captured-y])
+                                               :owner (player1 :player)))))
+           (def player2
+             (assoc player2 :hand (conj (player2 :hand)
+                                        (assoc (get-in board [captured-x captured-y])
+                                               :owner (player2 :player))))))
+         (update-game)))
+
+
+(defn move-piece
+  "Changes the game state to reflect a piece's movement.  Will deny outright-illegal moves,
+    will invoke capture if moving to a space occupied by an opposing piece, will update the global
+    Game state before returning.
+  TODO LATER:  implement check/checkmate tracking,
+               implement promotion,
+               implement turn switching."
+  [from-x from-y to-x to-y]
+  (do
+    (if (is-space-reachable-by-piece? from-x from-y to-x to-y)
+      (let [moving-piece (get-in board [from-x from-y])]
+        (def board
+          (assoc-in (assoc-in board [from-x from-y] nil)
+                    [to-x to-y] moving-piece))
+        (if (not (nil? (get-in board [to-x to-y])))
+          (capture-piece to-x to-y)))
+      (println "Illegal Move.  Space Not Reachable."))
+    (update-game)))
+
+
+(defn locate-king
+  "DRAFT: utility function which outputs an [x y] coordinate vector containing the location
+  of the specified player's king."
+  [player]
+  (first
+   (for [x (range 1 10) y (range 1 10)
+         :let [coords [x y]]
+         :when (and (= (get-in board [x y :type :name]) "King")
+                    (= (get-in board [x y :owner]) player))]
+     coords)))
+
+;; (defn locate-king
+;;   "DRAFT: utility function which outputs an [x y] coordinate vector containing the location
+;;   of the specified player's king."
+;;   []player]
+;;   (loop [y-coord 1]
+;;     (loop [x-coord 1]
+;;       (if (and (= (get-in board [x-coord y-coord :type :name]) "King")
+;;                (= (get-in board [x-coord y-coord :owner]) player))
+;;         (println [x-coord y-coord])
+;;         (if (< x-coord 10)
+;;           (recur (inc x-coord)))))
+;;     (if (< y-coord 10)
+;;       (recur (inc y-coord))))
