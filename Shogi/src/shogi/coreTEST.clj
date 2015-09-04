@@ -644,14 +644,34 @@
   NOTE: DOES NOT conduct secondary checks to determine if those moves
                  can be completed legally (yet).  For example, it will not notice that
                  capture could only be attempted by putting oneself in check."
-;;   [player]
-;;   (let [[king-x king-y] (locate-king player)
-;;         opposing-player ((get-other-player player) :player)]
-;;     (some #(= [king-x king-y] %) (query-all-moves-for-player opposing-player))))
-;; 
-;; (defn is-in-check?
    [player]
   (let [[king-x king-y] (locate-king player)
         opposing-player ((get-other-player player) :player)]
-    (is-space-reachable-by-player? king-x king-y opposing-player)))
+    (not (nil? (is-space-reachable-by-player? king-x king-y opposing-player)))))
 
+(defn is-in-checkmate?
+  "TESTING: DRAFT: Simple boolean result for whether parameter player is currently in checkmate.
+  TODO: Expand the search for moves which could displace check beyond just the king itself.
+        Check for move repetition for stalemate."
+  [player]
+  (let [[king-x king-y] (locate-king player)]
+    (if (and (is-in-check? player) (empty? (query-all-moves king-x king-y))) (true))))
+
+
+(defn drop-piece
+  "DRAFT: Removes a previously captured piece from the player's hand, and places it on
+          an empty space on the boart.
+  TODO:   Solidify checks for rules compliance."
+  [piece to-x to-y player]
+  (if (nil? (get-in board [to-x to-y]))
+    (do
+      (def board
+        (assoc-in board [to-x to-y] piece))
+      (def player
+        (remove #{piece} (get-in player [:hand])))
+      (update-game))
+    (println "Illegal Drop.  Destination not empty.")))
+
+;; TO DO: Promotions
+;;        Turn advancement and enforcement.
+;;        More thorough testing.
