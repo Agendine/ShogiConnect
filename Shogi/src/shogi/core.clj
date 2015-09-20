@@ -119,7 +119,8 @@
 
 (ns shogi.core
   (:gen-class)
-  (:require [cheshire.core :refer :all]))
+  (:require [cheshire.core :refer :all])
+  (:use clojure.test))
 
 (defn -main
   "I don't do a whole lot ... yet."
@@ -209,7 +210,8 @@
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
   (let [available-moves (move-direction [-1 0 origin-x origin-y spaces player])]
-   (into (move-direction [1 0 origin-x origin-y spaces player]) available-moves)))
+    (into [] (distinct (into (move-direction [1 0 origin-x origin-y spaces player])
+                             available-moves)))))
 
 (defn move-diagonal
   "Function for handling the fact that this piece can move in 4 diagonal directions,
@@ -427,23 +429,6 @@
     [lance-type 4]
     [pawn-type 18]]))
 
-
-(defn test-pretty-print2
-  "DRAFT: Development method for pretty-printing the board.
-   DEPRECATED: this one works with a (row col) based lookup system."
-  []
-  (map (fn [arg1]
-         (println (apply str
-                         (map #(if (nil?
-                                    (get-in(eval (read-string (str "col" arg1)))
-                                           [% :type :name]))
-                                 (str "     | ")
-                                 (str
-                                  (get-in (eval (read-string (str "col" arg1))) [% :type :name])
-                                          " | "))
-                              (range 1 10)))))
-       (range 1 10)))
-
 (defn pretty-print
   "DRAFT 2: Development method for pretty-printing the board.
   This one is adjusted for the (x y) coordinate lookup system."
@@ -457,6 +442,16 @@
        (reverse (range 1 10))))
 
 
+(defn pretty-test
+  "Captures a pretty print's output for uses besides printing it."
+  []
+  (map (fn [arg1]
+         (with-out-str (println (apply str
+                                       (map #(if (nil? (get-in board [% arg1 :type :name]))
+                                               (str "     | ")
+                                               (str (get-in board [% arg1 :type :name]) " | "))
+                                            (range 1 10))))))
+       (reverse (range 1 10))))
 
 
 ;; Board Definition and Initialization:
@@ -470,7 +465,7 @@
    ultimately contained, hierarchically, under the game map."
   []
   (do
-    (eval (initialize-pieces))
+    (initialize-pieces)
 
     (def col1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
                           8 nil  9 Lance4))
@@ -524,7 +519,7 @@
 
 
 
-;; *****************************************************************************************
+ ;; *****************************************************************************************
 ;; Movement:
 ;; *****************************************************************************************
 
@@ -543,7 +538,7 @@
   [piece-x piece-y]
   (distinct (reduce into (map
                           (fn [[move-function num-spaces]]
-                            (move-function num-spaces
+                            ((eval move-function) num-spaces
                                            piece-x piece-y
                                            (get-in board [piece-x piece-y :owner])))
                           (get-in board [piece-x piece-y :type :moves])))))
@@ -701,5 +696,94 @@
 ;; *****************************************************************************************
 ;; JSON and SQLite:
 ;; *****************************************************************************************
+
+(defn board-to-json
+  "Uses Cheshire's encode [== generate-string] to encode the state of the board to JSON"
+  [] (encode board))
+
+(defn game-to-json
+  "Uses Cheshire's encode [== generate-string] to encode the full game state to JSON"
+  [] (encode board))
+
+
+;; TODO
+;;   --------IMPORTANT------------
+;;   -Set up Parse from JSON to game state.
+;;   -----------------------------
+;;  -
+
+
+
+;; *****************************************************************************************
+;; Unit testing framework:
+;; *****************************************************************************************
+
+(defn board-fixture [function-in]
+  setup-board
+  (function-in))
+
+(deftest test-setup
+  (is (= (str (get-in board [3 1])
+          "{:type {:is-promotable true, :moves [[move-forward 1] [move-diagonal 1]], :name \"SilverGeneral\", :promotion promoted-silver-general-type}, :owner 1}")))
+  (is (= (str King1) "{:type {:is-promotable false, :moves [[move-horizontal 1] [move-forward 1] [move-backward 1] [move-diagonal 1]], :name \"King\", :promotion king-type}, :owner 1}")))
+
+
+(deftest test-move-queries
+  (is (= (move-direction [1 1 3 4 9 -1])
+         [[5 6] [4 5] [3 4]]))
+  (is (= (move-direction [1 1 3 4 9 1])
+         [[6 7] [5 6] [4 5] [3 4]]))
+  (is (= (move-direction [1 1 7 7 9 1]) [[7 7]]))
+  (is (= (move-direction [1 1 1 1 9 1]) []))
+
+  (is (= (move-horizontal 2 5 5 1) [[6 5] [5 5] [4 5]]))
+  (is (= (move-horizontal 2 5 5 -1) [[6 5] [5 5] [4 5]]))
+  (is (= (move-horizontal 2 3 3 -1) [[3 3]]))
+  (is (= (move-horizontal 2 3 3 1) []))
+
+  (is (= (move-diagonal 9 5 5 1) [[4 4] [3 7] [4 6] [6 4] [7 7] [6 6]]))
+  (is (= (move-diagonal 9 5 5 -1) [[3 3] [4 4] [4 6] [7 3] [6 4] [6 6]]))
+  (is (= (move-diagonal 5 3 3 -1) [[2 2] [1 5] [2 4] [5 1] [4 2] [6 6] [5 5] [4 4]]))
+  (is (= (move-diagonal 9 3 3 1) [[1 5] [2 4] [4 2] [7 7] [6 6] [5 5] [4 4]]))
+
+  (is (= (move-diagonal-forward 9 5 5 1) [[3 7] [4 6] [7 7] [6 6]]))
+  (is (= (move-diagonal-forward 9 5 5 -1) [[3 3] [4 4] [7 3] [6 4]]))
+  (is (= (move-diagonal-forward 9 3 3 -1) [[2 2] [5 1] [4 2]]))
+  (is (= (move-diagonal-forward 9 3 3 1) [[1 5] [2 4] [7 7] [6 6] [5 5] [4 4]]))
+
+  (is (= (move-forward 9 5 5 1) [[5 7] [5 6]]))
+  (is (= (move-forward 9 5 5 -1) [[5 3] [5 4]]))
+  (is (= (move-forward 9 3 3 -1) [[3 1] [3 2]]))
+  (is (= (move-forward 9 3 3 1) [[3 7] [3 6] [3 5] [3 4]]))
+
+  (is (= (move-backward 9 5 5 1) [[5 4]]))
+  (is (= (move-backward 9 5 5 -1) [[5 6]]))
+  (is (= (move-backward 9 3 3 -1) [[3 6] [3 5] [3 4]]))
+  (is (= (move-backward 9 3 3 1) [[3 2]]))
+
+  (is (= (move-jump 9 5 5 1) [[6 7] [4 7]]))
+  (is (= (move-jump 9 5 5 -1) [[6 3] [4 3]]))
+  (is (= (move-jump 9 3 3 -1) [[4 1] [2 1]]))
+  (is (= (move-jump 9 3 3 1) [[4 5] [2 5]]))
+
+  (is (= (query-all-moves 8 1) ()))
+
+  (is (=
+       (with-out-str (println (doall (query-all-moves-for-player 1))))
+       "([1 4] [2 4] [3 4] [4 4] [5 4] [6 4] [7 4] [8 4] [9 4] [9 2] [6 2] [7 2] [5 2] [4 2] [3 2] [1 2])\n"))
+
+  (is (=
+       (with-out-str (println (doall (query-all-moves-for-player -1))))
+       "([9 6] [8 6] [7 6] [6 6] [5 6] [4 6] [3 6] [2 6] [1 6] [9 8] [6 8] [7 8] [5 8] [4 8] [3 8] [1 8])\n")))
+
+
+(deftest test-all
+  (use-fixtures :once board-fixture)
+  (test-setup)
+  (test-move-queries))
+;;   (test-movement)
+;;   (test-capture)
+;;   (test-dropping)
+;;   (test-check-detection))
 
 
