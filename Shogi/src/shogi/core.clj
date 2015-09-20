@@ -402,8 +402,8 @@
   [[piece-type piece-amount]]
   (loop [index 1]
     (do
-      (eval `(def ~(symbol (str (piece-type :name) index)) {:owner 1 :type ~piece-type}))
-      (eval `(def ~(symbol (str (piece-type :name) (+ 1 index))) {:owner -1 :type ~piece-type}))
+      (eval `(def ~(symbol (str (piece-type :name) index)) {:owner 1 :type '~piece-type}))
+      (eval `(def ~(symbol (str (piece-type :name) (+ 1 index))) {:owner -1 :type '~piece-type}))
       (if (< index piece-amount)
         (recur (+ 2 index))))))
 
@@ -470,7 +470,7 @@
    ultimately contained, hierarchically, under the game map."
   []
   (do
-    (initialize-pieces)
+    (eval (initialize-pieces))
 
     (def col1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
                           8 nil  9 Lance4))
@@ -682,7 +682,10 @@
       (update-game))
     (println "Illegal Drop.  Destination not empty.")))
 
-;; TO DO: Promotions
+;; TO DO:
+;;        Query-all-in-hand
+;;              ~for purposes of JSONification
+;;        Promotions
 ;;             -isInPromotionZone
 ;;             -handlePromotion
 ;;             --ensure pieces aren't dropped into promotion or checkmate
@@ -698,6 +701,5 @@
 ;; *****************************************************************************************
 ;; JSON and SQLite:
 ;; *****************************************************************************************
-
 
 
