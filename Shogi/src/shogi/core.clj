@@ -120,6 +120,8 @@
 (ns shogi.core
   (:gen-class)
   (:require [cheshire.core :refer :all])
+  (:require [clojure.java.jdbc :refer :all :as jdbc])
+  (use '(lobos connectivity core schema))
   (:use clojure.test))
 
 (defn -main
@@ -279,21 +281,6 @@
 
 ;; Type Definition and Initialization:
 ;; ---------------------------------------------
-
-;; (declare king-type)
-;; (declare rook-type)
-;; (declare promoted-rook-type)
-;; (declare bishop-type)
-;; (declare promoted-bishop-type)
-;; (declare gold-general-type)
-;; (declare silver-general-type)
-;; (declare promoted-silver-general-type)
-;; (declare knight-type)
-;; (declare promoted-knight-type)
-;; (declare lance-type)
-;; (declare promoted-lance-type)
-;; (declare pawn-type)
-;; (declare promoted-pawn-type)
 
 (def king-type {:moves [['move-horizontal 1]
                         ['move-forward 1]
@@ -457,6 +444,47 @@
 ;; Board Definition and Initialization:
 ;; ---------------------------------------------
 
+(declare Lance1)
+(declare Lance2)
+(declare Lance3)
+(declare Lance4)
+(declare Knight1)
+(declare Knight2)
+(declare Knight3)
+(declare Knight4)
+(declare Bishop1)
+(declare Bishop2)
+(declare SilverGeneral1)
+(declare SilverGeneral2)
+(declare SilverGeneral3)
+(declare SilverGeneral4)
+(declare GoldGeneral1)
+(declare GoldGeneral2)
+(declare GoldGeneral3)
+(declare GoldGeneral4)
+(declare King1)
+(declare King2)
+(declare Rook1)
+(declare Rook2)
+(declare Pawn1)
+(declare Pawn2)
+(declare Pawn3)
+(declare Pawn4)
+(declare Pawn5)
+(declare Pawn6)
+(declare Pawn7)
+(declare Pawn8)
+(declare Pawn9)
+(declare Pawn10)
+(declare Pawn11)
+(declare Pawn12)
+(declare Pawn13)
+(declare Pawn14)
+(declare Pawn15)
+(declare Pawn16)
+(declare Pawn17)
+(declare Pawn18)
+
 (defn setup-board
   "Function to set up the board for the initial gamestate.  Initializes all starting pieces,
    and sets up the board with each piece in its proper starting place.
@@ -465,7 +493,6 @@
    ultimately contained, hierarchically, under the game map."
   []
   (do
-    (initialize-pieces)
 
     (def col1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
                           8 nil  9 Lance4))
@@ -494,7 +521,10 @@
     (def player2 {:player 1 :hand hand2 :in-check? false})
     (def turn player1)
 
-    (def game (hash-map :board board :turn turn -1 player1 1 player2))))
+    (def game (hash-map :board board :turn turn -1 player1 1 player2))
+
+    (initialize-pieces)))
+
 
 
 (defn update-game
@@ -628,21 +658,6 @@
                     (= (get-in board [x y :owner]) player))]
      coords)))
 
-;; (defn locate-king
-;;   "DRAFT: utility function which outputs an [x y] coordinate vector containing the location
-;;   of the specified player's king."
-;;   []player]
-;;   (loop [y-coord 1]
-;;     (loop [x-coord 1]
-;;       (if (and (= (get-in board [x-coord y-coord :type :name]) "King")
-;;                (= (get-in board [x-coord y-coord :owner]) player))
-;;         (println [x-coord y-coord])
-;;         (if (< x-coord 10)
-;;           (recur (inc x-coord)))))
-;;     (if (< y-coord 10)
-;;       (recur (inc y-coord))))
-
-
 (defn is-in-check?
   "TESTING: DRAFT: simple boolean result for whether any of the opposing player's pieces have
    the parameter player's king as an available move.
@@ -719,7 +734,9 @@
 ;; *****************************************************************************************
 
 (defn board-fixture [function-in]
-  setup-board
+  (do
+    (initialize-pieces)
+    (setup-board))
   (function-in))
 
 (deftest test-setup
@@ -778,7 +795,7 @@
 
 
 (deftest test-all
-  (use-fixtures :once board-fixture)
+  (use-fixtures :each board-fixture)
   (test-setup)
   (test-move-queries))
 ;;   (test-movement)
