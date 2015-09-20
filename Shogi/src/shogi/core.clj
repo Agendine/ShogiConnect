@@ -121,8 +121,12 @@
   (:gen-class)
   (:require [cheshire.core :refer :all])
   (:require [clojure.java.jdbc :refer :all :as jdbc])
-  (use '(lobos connectivity core schema))
   (:use clojure.test))
+;;  (:require [sqlingvo.core :refer :all])
+;;  (:require [sqlingvo.db :as db]))
+;;  (:use (lobos connectivity core schema))
+;;  (:use korma.db)
+;;  (:use korma.core))
 
 (defn -main
   "I don't do a whole lot ... yet."
@@ -709,9 +713,22 @@
 
 
 ;; *****************************************************************************************
-;; JSON and SQLite:
+;; JSON:
 ;; *****************************************************************************************
 
+;; As of now, the architecture looks like this:
+;;     The client app: Stores multiple games in a local db, and in order to view or make a move
+;;                            in a game, parses that into memory.  Only one game should ever
+;;                            be loaded into memory at a time, so it's fine that that game
+;;                            occupies global variable.
+;;                     Transmits the game state after making a move to the server,
+;;                            by simply reducing the game state to a json object,
+;;                            and sending it on its way to be verified, stored, and passed
+;;                            on to the other player.
+;;                     Recieves new moves by way of a full json of the new game state,
+;;                            and parses this into the native object format, such that moves can
+;;                            be immediately made, or the game can be stored to the local DB for
+;;                            later usage.
 (defn board-to-json
   "Uses Cheshire's encode [== generate-string] to encode the state of the board to JSON"
   [] (encode board))
@@ -729,14 +746,100 @@
 
 
 
+
+
 ;; *****************************************************************************************
-;; Unit testing framework:
+;; SQLite:
+;; *****************************************************************************************
+
+;; Provides access to the (TESTING) user database, which contains tables for:
+;;          -User info
+;;               >> UID (int), username (text), gamelist (int link),
+;;               >> location (text), rank (int), friendlist (int link),
+;;               >> providerID (int), client (enum, google/iOS)
+;;               >> numGamesPlayed (int)
+;;          -In-progress game list.
+;;               >> GameID (int), Player1 (int, UID), Player2 (int, UID),
+;;               >> GameState(JSON), CurrentTurn (int), DateOfLastMove(int),
+;;
+;;                  >> TODO: movelist
+;;          TODO: -Ranked Play request list
+;;               >> UID (int), username (text), rank (int), location (text)
+;;          TODO: -Unranked Play request list
+;;               >> UID (int), username (text), location (text), message (text)
+
+(def db
+  {:classname "org.sqlite.JDBC"
+   :subprotocol "sqlite"
+   :subname "db/userdb"})
+
+
+
+;;       TODO:
+;; Create a player
+;; Start new game
+;; Send move
+;; Receive move
+
+
+;; UTILITY.  TO BE REMOVED.
+(def testdata-sqlite
+  {:UID 1112223
+   :username "test1"
+   :gamelist 1
+   :location "mars"
+   :rank 1
+   :friendlist 2
+   :providerID 123
+   :client 1})
+
+;; *****************************************************************************************
+;; PostgreSQL:
+;; *****************************************************************************************
+
+;; Provides access to the (TESTING) user database, which contains tables for:
+;;          -User info
+;;               >> UID (int), username (text), gamelist (int link),
+;;               >> location (text), rank (int), friendlist (int link),
+;;               >> providerID (int), client (enum, google/iOS)
+;;               >> numGamesPlayed (int)
+;;          -In-progress game list.
+;;               >> GameID (int), Player1 (int, UID), Player2 (int, UID),
+;;               >> GameState(JSON), CurrentTurn (int), DateOfLastMove(int),
+;;
+;;                  >> TODO: movelist
+;;          TODO: -Ranked Play request list
+;;               >> UID (int), username (text), rank (int), location (text)
+;;          TODO: -Unranked Play request list
+;;               >> UID (int), username (text), location (text), message (text)
+
+
+(def userdb
+  {:classname "org.postgresql.Driver"
+   :subprotocol "postgresql"
+   :subname "//127.0.0.1:5432/userdb"})
+
+
+;; UTILITY.  TO BE REMOVED.
+(def testdata-psql
+  {:UID 1112223
+   :username "test1"
+   :gamelist 1
+   :location "mars"
+   :rank 1
+   :friendlist 2
+   :providerID 123
+   :client 1
+   :gamesplayed 0})
+
+
+
+;; *****************************************************************************************
+;; Unit tests and supporting framework:
 ;; *****************************************************************************************
 
 (defn board-fixture [function-in]
-  (do
-    (initialize-pieces)
-    (setup-board))
+  (setup-board)
   (function-in))
 
 (deftest test-setup
@@ -794,10 +897,11 @@
        "([9 6] [8 6] [7 6] [6 6] [5 6] [4 6] [3 6] [2 6] [1 6] [9 8] [6 8] [7 8] [5 8] [4 8] [3 8] [1 8])\n")))
 
 
-(deftest test-all
-  (use-fixtures :each board-fixture)
-  (test-setup)
-  (test-move-queries))
+(use-fixtures :once board-fixture)
+
+;; (deftest test-all
+;;   (test-setup)
+;;   (test-move-queries))
 ;;   (test-movement)
 ;;   (test-capture)
 ;;   (test-dropping)
