@@ -263,7 +263,7 @@
   "Function for handling the fact that this piece can move backward (relative to owner),
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
-  [spaces origin-x origin-y player]
+  [board spaces origin-x origin-y player]
   (move-direction [board 0 (* player -1) origin-x (- origin-y player) spaces player]))
 
 (defn move-jump
@@ -513,10 +513,8 @@
          :turn player1
          1 player2
          -1 player1
-         player2 {:player 1 :hand hand2 :in-check? false}
-         player1 {:player -1 :hand hand1 :in-check? false}
-         hand2 []
-         hand1 []
+         player2 {:player 1 :hand {} :in-check? false}
+         player1 {:player -1 :hand {} :in-check? false}
          :board (let [board (hash-map)]
            (initialize-pieces board)
            (assoc board
@@ -541,7 +539,6 @@
 
 
 
-;; ------------------Refactored  to purely functional up to here----------------------
 
 (defn update-game
   "IMPORTANT: This function can be called at any time to update the game object to store the
@@ -581,12 +578,12 @@
   "DRAFT: function to aggregate all open moves from all movement methods of
   an unknown piece, queried by board position.  NOTE: THESE RESULTS ARE RAW! Does NOT exclude
   moves for moving into check or other secondary rules violations."
-  [piece-x piece-y]
+  [board piece-x piece-y]
   (distinct (reduce into (map
                           (fn [[move-function num-spaces]]
-                            ((eval move-function) num-spaces
-                                           piece-x piece-y
-                                           (get-in board [piece-x piece-y :owner])))
+                            ((eval move-function) board num-spaces
+                             piece-x piece-y
+                             (get-in board [piece-x piece-y :owner])))
                           (get-in board [piece-x piece-y :type :moves])))))
 
 (defn query-all-moves-for-player
@@ -595,7 +592,7 @@
   NOTE THAT THIS IS RAW DATA!  Secondary-rules violations, such as moving into check, are NOT checked
   at this stage.  All moves in the output vector are distinct, but are not matched to any particular
   moving piece."
- [player]
+ [board player]
   (remove #(= [] %) (distinct
                      (reduce into
                              (map (fn [y-coord]
@@ -604,43 +601,104 @@
                                                                                       y-coord
                                                                                       :owner])
                                                                        player)
-                                                                  (query-all-moves x-coord y-coord)
+                                                                  (query-all-moves board x-coord y-coord)
                                                                   []))
                                                   (range 1 10))))
                                   (range 1 10))))))
 
-
 (defn is-space-reachable-by-player?
   "Returns boolean result for whether any of the specified player's pieces could semi-legally
    reach the specified board space."
-  [x-coord y-coord player]
-  (some #(= [x-coord y-coord] %) (query-all-moves-for-player player)))
+  [board x-coord y-coord player]
+  (some #(= [x-coord y-coord] %) (query-all-moves-for-player board player)))
 
 (defn is-space-reachable-by-piece?
   "Returns boolean result for whether a specified piece could (semi-)legally
    reach the specified board space."
-  [from-x from-y to-x to-y]
-  (some #(= [to-x to-y] %) (query-all-moves from-x from-y)))
+  [board from-x from-y to-x to-y]
+  (some #(= [to-x to-y] %) (query-all-moves board from-x from-y)))
+
+
+;; (defn capture-piece
+;;        "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
+;;                and exchanging ownership of the piece.  Only call this function when capture
+;;                has already been verified for legality.  This function assumes that the proper
+;;                player is performing the capture.
+;;    TODO LATER: De-promote as well.
+;;                Test more thoroughly, particularly that both game and board update properly."
+;;        [board captured-x captured-y]
+;;        (do
+;;          (if (= (get-in board [captured-x captured-y :owner]) (player2 :player))
+;;            (def player1
+;;              (assoc player1 :hand (conj (player1 :hand)
+;;                                         (assoc (get-in board [captured-x captured-y])
+;;                                                :owner (player1 :player)))))
+;;            (def player2
+;;              (assoc player2 :hand (conj (player2 :hand)
+;;                                         (assoc (get-in board [captured-x captured-y])
+;;                                                :owner (player2 :player))))))
+;;          (update-game)))
+
+;; (defn capture-piece
+;;        "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
+;;                and exchanging ownership of the piece.  Only call this function when capture
+;;                has already been verified for legality.  This function assumes that the proper
+;;                player is performing the capture.
+;;    TODO LATER: De-promote as well.
+;;                Test more thoroughly, particularly that both game and board update properly."
+;;        [game captured-x captured-y]
+;;          (if (= (get-in game [board captured-x captured-y :owner]) (get game player1))
+;;                 (assoc-in game [player1 :hand] (conj (get-in game [player1 :hand])
+;;                                                      (assoc (get-in game [board captured-x captured-y])
+;;                                                             :owner (get game player1))))
+;;                 (assoc-in game [player2 :hand] (conj (get-in game [player2 :hand])
+;;                                                      (assoc (get-in game [board captured-x captured-y])
+;;                                                             :owner (get game player2))))))
+;; 
+;; (defn capture-piece
+;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
+;;                and exchanging ownership of the piece.  Only call this function when capture
+;;                has already been verified for legality.  This function assumes that the proper
+;;                player is performing the capture.
+;;    TODO LATER: De-promote as well.
+;;                Test more thoroughly, particularly that both game and board update properly."
+;;   [game captured-x captured-y]
+;;   (if (= (get-in game [board captured-x captured-y :owner]) (get game player1))
+;;     (assoc-in game [player1 :hand] (assoc-in (get-in game [:board captured-x captured-y]) :owner -1))
+;;     (assoc-in game [player2 :hand] (assoc (get-in game [:board captured-x captured-y]) :owner 1))))
+;; 
+;; (defn capture-piece
+;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
+;;                and exchanging ownership of the piece.  Only call this function when capture
+;;                has already been verified for legality.  This function assumes that the proper
+;;                player is performing the capture.
+;;    TODO LATER: De-promote as well.
+;;                Test more thoroughly, particularly that both game and board update properly."
+;;   [game captured-x captured-y]
+;;   (if (= (get-in game [board captured-x captured-y :owner]) -1)
+;;     (do
+;;       (assoc-in game [:board captured-x captured-y :owner] -1)
+;;       (assoc-in game [player1 :hand] (get-in game [:board captured-x captured-y])))
+;;     (do
+;;       (assoc-in game [:board captured-x captured-y :owner] 1)
+;;       (assoc-in game [player2 :hand] (get-in game [:board captured-x captured-y])))))
 
 (defn capture-piece
-       "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
+  "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
                and exchanging ownership of the piece.  Only call this function when capture
                has already been verified for legality.  This function assumes that the proper
                player is performing the capture.
    TODO LATER: De-promote as well.
                Test more thoroughly, particularly that both game and board update properly."
-       [captured-x captured-y]
-       (do
-         (if (= (get-in board [captured-x captured-y :owner]) (player2 :player))
-           (def player1
-             (assoc player1 :hand (conj (player1 :hand)
-                                        (assoc (get-in board [captured-x captured-y])
-                                               :owner (player1 :player)))))
-           (def player2
-             (assoc player2 :hand (conj (player2 :hand)
-                                        (assoc (get-in board [captured-x captured-y])
-                                               :owner (player2 :player))))))
-         (update-game)))
+  [game captured-x captured-y]
+  (if (= (get-in game [board captured-x captured-y :owner]) -1)
+    (assoc-in (assoc-in game [:board captured-x captured-y :owner] -1)
+              [player1 :hand] (get-in game [:board captured-x captured-y])))
+  (assoc-in (assoc-in game [:board captured-x captured-y :owner] 1)
+            [player2 :hand] (get-in game [:board captured-x captured-y])))
+
+
+;; ------------------Refactored  to purely functional up to here----------------------
 
 
 (defn move-piece
@@ -720,7 +778,18 @@
 ;;        More thorough testing.
 
 
+;; *****************************************************************************************
+;; Loading a game state
+;; *****************************************************************************************
 
+(defn movelist-to-4tuple
+  "Reading a list of moves from a string to a useable list of 4-tuples"
+  [moveList]
+  (for [currMove (partition 4 moveList)] (map #(Character/getNumericValue %) currMove)))
+
+;; Fast-forwarding game state from (setup-board) to <current-state> using a list of
+;; [:fromX :fromY :toX :toY] tuples.  Note that :fromX = -1 yields "from player1's hand"
+;; and :fromX = -2 yields "from player2's hand"
 
 
 
