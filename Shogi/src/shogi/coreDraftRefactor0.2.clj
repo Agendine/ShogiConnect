@@ -506,59 +506,61 @@
   of important state, they're just a shorthand making it easier to declare everything.
   For debugging, you can use them to prettyprint, though.
 
-  edit 22Dec2015: Attempting to make entirely functional.  Call it using: (setup-board {})"
-  [game]
-  ;;  (declare-all board)
-  (assoc game
-         :turn player1
-         1 player2
-         -1 player1
-         player2 {:player 1 :hand {} :in-check? false}
-         player1 {:player -1 :hand {} :in-check? false}
-         :board (let [board (hash-map)]
-           (initialize-pieces board)
-           (assoc board
-                  1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
-                                8 nil  9 Lance4)
-                  2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4
-                                8 Bishop2 9 Knight4)
-                  3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6
-                                8 nil  9 SilverGeneral4)
-                  4 (sorted-map 1 GoldGeneral1 2 nil 3 Pawn7 4 nil 5 nil 6 nil 7 Pawn8
-                                8 nil 9 GoldGeneral2)
-                  5 (sorted-map 1 King1 2 nil 3 Pawn9 4 nil 5 nil 6 nil 7 Pawn10 8 nil
-                                9 King2)
-                  6 (sorted-map 1 GoldGeneral3 2 nil 3 Pawn11 4 nil 5 nil 6 nil 7 Pawn12
-                                8 nil 9 GoldGeneral4)
-                  7 (sorted-map 1 SilverGeneral3 2 nil 3 Pawn13 4 nil 5 nil 6 nil 7 Pawn14
-                                8 nil 9 SilverGeneral4)
-                  8 (sorted-map 1 Knight3 2 Bishop1 3 Pawn15 4 nil 5 nil 6 nil 7 Pawn16
-                                8 Rook2 9 Knight4)
-                  9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18
-                                8 nil 9 Lance4)))))
-
-
-
-
-(defn update-game
-  "IMPORTANT: This function can be called at any time to update the game object to store the
-   current state of the board, player-hands, turn counter, etc.
-  THIS MUST BE CALLED AFTER EVERY TURN, before storing the game to JSON!"
-  [board]
-  (def game (hash-map :board board :turn turn -1 player1 1 player2)))
-
-
-;; Player and Board Resets (for development):
-;; ---------------------------------------------
-
-(defn reset-hands
+  edit 22Dec2015: Attempting to make entirely functional.  Call it using: (setup-board)"
   []
-  (def hand1 [])
-  (def hand2 [])
-  (def player1 {:player -1 :hand hand1 :in-check? false})
-  (def player2 {:player 1 :hand hand2 :in-check? false})
-  (def turn player1)
-  (update-game))
+  ;;  (declare-all board)
+  (let [game (hash-map)]
+    (assoc game
+           :turn player1
+           1 player2
+           -1 player1
+           player2 {:player 1 :hand {} :in-check? false}
+           player1 {:player -1 :hand {} :in-check? false}
+           :board (let [board (hash-map)]
+                    (initialize-pieces board)
+                    (assoc board
+                           1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
+                                         8 nil  9 Lance4)
+                           2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4
+                                         8 Bishop2 9 Knight4)
+                           3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6
+                                         8 nil  9 SilverGeneral4)
+                           4 (sorted-map 1 GoldGeneral1 2 nil 3 Pawn7 4 nil 5 nil 6 nil 7 Pawn8
+                                         8 nil 9 GoldGeneral2)
+                           5 (sorted-map 1 King1 2 nil 3 Pawn9 4 nil 5 nil 6 nil 7 Pawn10 8 nil
+                                         9 King2)
+                           6 (sorted-map 1 GoldGeneral3 2 nil 3 Pawn11 4 nil 5 nil 6 nil 7 Pawn12
+                                         8 nil 9 GoldGeneral4)
+                           7 (sorted-map 1 SilverGeneral3 2 nil 3 Pawn13 4 nil 5 nil 6 nil 7 Pawn14
+                                         8 nil 9 SilverGeneral4)
+                           8 (sorted-map 1 Knight3 2 Bishop1 3 Pawn15 4 nil 5 nil 6 nil 7 Pawn16
+                                         8 Rook2 9 Knight4)
+                           9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18
+                                         8 nil 9 Lance4))))))
+
+
+
+
+;; (defn update-game
+;;   "DEFUNCT??
+;;    IMPORTANT: This function can be called at any time to update the game object to store the
+;;    current state of the board, player-hands, turn counter, etc.
+;;   THIS MUST BE CALLED AFTER EVERY TURN, before storing the game to JSON!"
+;;   [board]
+;;   (def game (hash-map :board board :turn turn -1 player1 1 player2)))
+;; 
+;; 
+;; ;; Player and Board Resets (for development):
+;; ;; ---------------------------------------------
+;; 
+;; (defn reset-hands
+;;   []
+;;   (def hand1 [])
+;;   (def hand2 [])
+;;   (def player1 {:player -1 :hand hand1 :in-check? false})
+;;   (def player2 {:player 1 :hand hand2 :in-check? false})
+;;   (def turn player1)
+;;   (update-game))
 
 
 
@@ -698,33 +700,61 @@
             [player2 :hand] (get-in game [:board captured-x captured-y])))
 
 
-;; ------------------Refactored  to purely functional up to here----------------------
 
+
+;; (defn move-piece
+;;   "Changes the game state to reflect a piece's movement.  Will deny outright-illegal moves,
+;;     will invoke capture if moving to a space occupied by an opposing piece, will update the global
+;;     Game state before returning.
+;;   TODO LATER:  implement check/checkmate tracking,
+;;                implement promotion,
+;;                implement turn switching."
+;;   [from-x from-y to-x to-y]
+;;   (do
+;;     (if (is-space-reachable-by-piece? from-x from-y to-x to-y)
+;;       (let [moving-piece (get-in board [from-x from-y])]
+;;         (def board
+;;           (assoc-in (assoc-in board [from-x from-y] nil)
+;;                     [to-x to-y] moving-piece))
+;;         (if (not (nil? (get-in board [to-x to-y])))
+;;           (capture-piece to-x to-y)))
+;;       (println "Illegal Move.  Space Not Reachable."))
+;;     (update-game)))
+;;
+;; (defn move-piece
+;;   "Changes the game state to reflect a piece's movement.  Will deny outright-illegal moves,
+;;     will invoke capture if moving to a space occupied by an opposing piece, will update the global
+;;     Game state before returning.
+;;   TODO LATER:  implement check/checkmate tracking,
+;;                implement promotion,
+;;                implement turn switching."
+;;   [game from-x from-y to-x to-y]
+;;   (do
+;;     (if (is-space-reachable-by-piece? board from-x from-y to-x to-y)
+;;       (do
+;;         (if (not (nil? (get-in game [:board to-x to-y])))
+;;           (capture-piece game to-x to-y))
+;;         (assoc-in (assoc-in game [:board to-x to-y] (get-in game [:board from-x from-y]))
+;;                   [:board from-x from-y] nil))
+;;       (println "Illegal Move.  Space Not Reachable."))))
 
 (defn move-piece
-  "Changes the game state to reflect a piece's movement.  Will deny outright-illegal moves,
-    will invoke capture if moving to a space occupied by an opposing piece, will update the global
-    Game state before returning.
+  "Changes the game state to reflect a piece's movement.  Will not deny illegal moves,
   TODO LATER:  implement check/checkmate tracking,
                implement promotion,
                implement turn switching."
-  [from-x from-y to-x to-y]
-  (do
-    (if (is-space-reachable-by-piece? from-x from-y to-x to-y)
-      (let [moving-piece (get-in board [from-x from-y])]
-        (def board
-          (assoc-in (assoc-in board [from-x from-y] nil)
-                    [to-x to-y] moving-piece))
-        (if (not (nil? (get-in board [to-x to-y])))
-          (capture-piece to-x to-y)))
-      (println "Illegal Move.  Space Not Reachable."))
-    (update-game)))
+  [game from-x from-y to-x to-y]
+  (assoc-in (assoc-in game [:board to-x to-y] (get-in game [:board from-x from-y]))
+            [:board from-x from-y] nil))
+
+
+;; ------------------Refactored  to purely functional up to here----------------------
 
 
 (defn locate-king
   "DRAFT: utility function which outputs an [x y] coordinate vector containing the location
   of the specified player's king."
-  [player]
+  [board player]
   (first
    (for [x (range 1 10) y (range 1 10)
          :let [coords [x y]]
@@ -738,18 +768,18 @@
   NOTE: DOES NOT conduct secondary checks to determine if those moves
                  can be completed legally (yet).  For example, it will not notice that
                  capture could only be attempted by putting oneself in check."
-   [player]
-  (let [[king-x king-y] (locate-king player)
+   [board player]
+  (let [[king-x king-y] (locate-king board player)
         opposing-player ((get-other-player player) :player)]
-    (not (nil? (is-space-reachable-by-player? king-x king-y opposing-player)))))
+    (not (nil? (is-space-reachable-by-player? board king-x king-y opposing-player)))))
 
 (defn is-in-checkmate?
   "TESTING: DRAFT: Simple boolean result for whether parameter player is currently in checkmate.
   TODO: Expand the search for moves which could displace check beyond just the king itself.
         Check for move repetition for stalemate."
-  [player]
-  (let [[king-x king-y] (locate-king player)]
-    (if (and (is-in-check? player) (empty? (query-all-moves king-x king-y))) (true))))
+  [board player]
+  (let [[king-x king-y] (locate-king board player)]
+    (if (and (is-in-check? board player) (empty? (query-all-moves board king-x king-y))) (true))))
 
 
 (defn drop-piece
