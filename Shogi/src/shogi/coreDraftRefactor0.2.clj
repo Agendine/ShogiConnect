@@ -176,9 +176,42 @@
 ;; Core Movement Logic:
 ;; ---------------------------------------------
 
+;; (defn move-direction
+;;   "Quick test implementation for generic movement in a direction, called recursively.
+;;     Actually just tests if the current space is a legal move, and if so whether to
+;;     then test the next space in that direction, or else return a vector of the legal
+;;     moves found. direction-x/y is +1 or -1 (- is up/left, + is down/right) and
+;;     origin-x/y refers to the space being tested.  The remaining parameter allows
+;;     for having either one-space or full-board movement in that direction.
+;;     The accumulator parameter should be [] on an initial call, and will be returned
+;;     as [[x y] [x2 y2]] style list of coordinate-pairs of legal moves.
+;;     The player parameter indicates the moving piece's owner.
+;;     Returns a vector of available moves in the direction."
+;;   [[board direction-x direction-y origin-x origin-y remaining player]]
+;;   ;; If the current space is on-board, continue, else end checking in this direction.
+;;   (if (is-on-board origin-x origin-y)
+;;     ;; If the piece has enough movement for the distance, continue, else end
+;;     (if (< 0 remaining)
+;;       ;; If the current space is unoccupied, then proceed on this direction, else
+;;       ;;    check if it's player's or opponent's and handle:
+;;       (if (= (get-in board [origin-x origin-y]) nil)
+;;         (let [further-moves  (move-direction
+;;                                [board direction-x direction-y
+;;                                 (+ direction-x origin-x) (+ direction-y origin-y)
+;;                                 (- remaining 1) player])]
+;;              (into further-moves [[origin-x origin-y]]))
+;;         ;; If the space is occupied by Player's Piece, stop checking this direction, else
+;;         ;; handle as either capturable Piece or Check/Checkmate
+;;         (if (= (get-in board [origin-x origin-y :owner]) player)
+;;           []
+;;           ;;        (TODO: INDICATE CAPTURABLE SEPERATELY)
+;;           [[origin-x origin-y]]))
+;;       [])
+;;     []))
+
 (defn move-direction
-  "Quick test implementation for generic movement in a direction, called recursively.
-    Actually just tests if the current space is a legal move, and if so whether to
+  "Quick implementation for the logic of generic movement in a direction, called recursively.
+    Actually just tests if the current space is a semi-legal move, and if so whether to
     then test the next space in that direction, or else return a vector of the legal
     moves found. direction-x/y is +1 or -1 (- is up/left, + is down/right) and
     origin-x/y refers to the space being tested.  The remaining parameter allows
@@ -195,19 +228,15 @@
       ;; If the current space is unoccupied, then proceed on this direction, else
       ;;    check if it's player's or opponent's and handle:
       (if (= (get-in board [origin-x origin-y]) nil)
-        (let [further-moves  (move-direction
-                               [board direction-x direction-y
-                                (+ direction-x origin-x) (+ direction-y origin-y)
-                                (- remaining 1) player])]
-             (into further-moves [[origin-x origin-y]]))
-        ;; If the space is occupied by Player's Piece, stop checking this direction, else
-        ;; handle as either capturable Piece or Check/Checkmate
+        (into (move-direction [board direction-x direction-y
+                               (+ direction-x origin-x) (+ direction-y origin-y)
+                               (- remaining 1) player]) [[origin-x origin-y]]))
+        ;; If the space is occupied by Player's Piece, stop checking this direction
         (if (= (get-in board [origin-x origin-y :owner]) player)
           []
-          ;;        (TODO: INDICATE CAPTURABLE SEPERATELY)
           [[origin-x origin-y]]))
       [])
-    []))
+    [])
 
 
 (defn move-horizontal
@@ -276,14 +305,12 @@
 
 
 
-
-
 ;; *****************************************************************************************
 ;; Board Setup:
 ;; *****************************************************************************************
 
 
-;; Type Definition and Initialization:
+;; Global, immutable, essentially 'const' definitions, for shorthand.  No need to ever change these.
 ;; ---------------------------------------------
 
 (def king-type {:moves [['move-horizontal 1]
@@ -451,49 +478,6 @@
 ;; Board Definition and Initialization:
 ;; ---------------------------------------------
 
-;; (defun declare-all
-;;   ;;Function to declare 
-;;   [board]
-;;   (declare Lance1)
-;;   (declare Lance2)
-;;   (declare Lance3)
-;;   (declare Lance4)
-;;   (declare Knight1)
-;;   (declare Knight2)
-;;   (declare Knight3)
-;;   (declare Knight4)
-;;   (declare Bishop1)
-;;   (declare Bishop2)
-;;   (declare SilverGeneral1)
-;;   (declare SilverGeneral2)
-;;   (declare SilverGeneral3)
-;;   (declare SilverGeneral4)
-;;   (declare GoldGeneral1)
-;;   (declare GoldGeneral2)
-;;   (declare GoldGeneral3)
-;;   (declare GoldGeneral4)
-;;   (declare King1)
-;;   (declare King2)
-;;   (declare Rook1)
-;;   (declare Rook2)
-;;   (declare Pawn1)
-;;   (declare Pawn2)
-;;   (declare Pawn3)
-;;   (declare Pawn4)
-;;   (declare Pawn5)
-;;   (declare Pawn6)
-;;   (declare Pawn7)
-;;   (declare Pawn8)
-;;   (declare Pawn9)
-;;   (declare Pawn10)
-;;   (declare Pawn11)
-;;   (declare Pawn12)
-;;   (declare Pawn13)
-;;   (declare Pawn14)
-;;   (declare Pawn15)
-;;   (declare Pawn16)
-;;   (declare Pawn17)
-;;   (declare Pawn18))
 
 (defn setup-board
   "Function to set up the board for the initial gamestate.  Initializes all starting pieces,
@@ -508,7 +492,6 @@
 
   edit 22Dec2015: Attempting to make entirely functional.  Call it using: (setup-board)"
   []
-  ;;  (declare-all board)
   (let [game (hash-map)]
     (assoc game
            :turn player1
@@ -537,30 +520,6 @@
                                          8 Rook2 9 Knight4)
                            9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18
                                          8 nil 9 Lance4))))))
-
-
-
-
-;; (defn update-game
-;;   "DEFUNCT??
-;;    IMPORTANT: This function can be called at any time to update the game object to store the
-;;    current state of the board, player-hands, turn counter, etc.
-;;   THIS MUST BE CALLED AFTER EVERY TURN, before storing the game to JSON!"
-;;   [board]
-;;   (def game (hash-map :board board :turn turn -1 player1 1 player2)))
-;; 
-;; 
-;; ;; Player and Board Resets (for development):
-;; ;; ---------------------------------------------
-;; 
-;; (defn reset-hands
-;;   []
-;;   (def hand1 [])
-;;   (def hand2 [])
-;;   (def player1 {:player -1 :hand hand1 :in-check? false})
-;;   (def player2 {:player 1 :hand hand2 :in-check? false})
-;;   (def turn player1)
-;;   (update-game))
 
 
 
@@ -620,71 +579,6 @@
   [board from-x from-y to-x to-y]
   (some #(= [to-x to-y] %) (query-all-moves board from-x from-y)))
 
-
-;; (defn capture-piece
-;;        "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece.  Only call this function when capture
-;;                has already been verified for legality.  This function assumes that the proper
-;;                player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;        [board captured-x captured-y]
-;;        (do
-;;          (if (= (get-in board [captured-x captured-y :owner]) (player2 :player))
-;;            (def player1
-;;              (assoc player1 :hand (conj (player1 :hand)
-;;                                         (assoc (get-in board [captured-x captured-y])
-;;                                                :owner (player1 :player)))))
-;;            (def player2
-;;              (assoc player2 :hand (conj (player2 :hand)
-;;                                         (assoc (get-in board [captured-x captured-y])
-;;                                                :owner (player2 :player))))))
-;;          (update-game)))
-
-;; (defn capture-piece
-;;        "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece.  Only call this function when capture
-;;                has already been verified for legality.  This function assumes that the proper
-;;                player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;        [game captured-x captured-y]
-;;          (if (= (get-in game [board captured-x captured-y :owner]) (get game player1))
-;;                 (assoc-in game [player1 :hand] (conj (get-in game [player1 :hand])
-;;                                                      (assoc (get-in game [board captured-x captured-y])
-;;                                                             :owner (get game player1))))
-;;                 (assoc-in game [player2 :hand] (conj (get-in game [player2 :hand])
-;;                                                      (assoc (get-in game [board captured-x captured-y])
-;;                                                             :owner (get game player2))))))
-;; 
-;; (defn capture-piece
-;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece.  Only call this function when capture
-;;                has already been verified for legality.  This function assumes that the proper
-;;                player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;   [game captured-x captured-y]
-;;   (if (= (get-in game [board captured-x captured-y :owner]) (get game player1))
-;;     (assoc-in game [player1 :hand] (assoc-in (get-in game [:board captured-x captured-y]) :owner -1))
-;;     (assoc-in game [player2 :hand] (assoc (get-in game [:board captured-x captured-y]) :owner 1))))
-;; 
-;; (defn capture-piece
-;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece.  Only call this function when capture
-;;                has already been verified for legality.  This function assumes that the proper
-;;                player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;   [game captured-x captured-y]
-;;   (if (= (get-in game [board captured-x captured-y :owner]) -1)
-;;     (do
-;;       (assoc-in game [:board captured-x captured-y :owner] -1)
-;;       (assoc-in game [player1 :hand] (get-in game [:board captured-x captured-y])))
-;;     (do
-;;       (assoc-in game [:board captured-x captured-y :owner] 1)
-;;       (assoc-in game [player2 :hand] (get-in game [:board captured-x captured-y])))))
-
 (defn capture-piece
   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
                and exchanging ownership of the piece.  Only call this function when capture
@@ -699,44 +593,6 @@
   (assoc-in (assoc-in game [:board captured-x captured-y :owner] 1)
             [player2 :hand] (get-in game [:board captured-x captured-y])))
 
-
-
-
-;; (defn move-piece
-;;   "Changes the game state to reflect a piece's movement.  Will deny outright-illegal moves,
-;;     will invoke capture if moving to a space occupied by an opposing piece, will update the global
-;;     Game state before returning.
-;;   TODO LATER:  implement check/checkmate tracking,
-;;                implement promotion,
-;;                implement turn switching."
-;;   [from-x from-y to-x to-y]
-;;   (do
-;;     (if (is-space-reachable-by-piece? from-x from-y to-x to-y)
-;;       (let [moving-piece (get-in board [from-x from-y])]
-;;         (def board
-;;           (assoc-in (assoc-in board [from-x from-y] nil)
-;;                     [to-x to-y] moving-piece))
-;;         (if (not (nil? (get-in board [to-x to-y])))
-;;           (capture-piece to-x to-y)))
-;;       (println "Illegal Move.  Space Not Reachable."))
-;;     (update-game)))
-;;
-;; (defn move-piece
-;;   "Changes the game state to reflect a piece's movement.  Will deny outright-illegal moves,
-;;     will invoke capture if moving to a space occupied by an opposing piece, will update the global
-;;     Game state before returning.
-;;   TODO LATER:  implement check/checkmate tracking,
-;;                implement promotion,
-;;                implement turn switching."
-;;   [game from-x from-y to-x to-y]
-;;   (do
-;;     (if (is-space-reachable-by-piece? board from-x from-y to-x to-y)
-;;       (do
-;;         (if (not (nil? (get-in game [:board to-x to-y])))
-;;           (capture-piece game to-x to-y))
-;;         (assoc-in (assoc-in game [:board to-x to-y] (get-in game [:board from-x from-y]))
-;;                   [:board from-x from-y] nil))
-;;       (println "Illegal Move.  Space Not Reachable."))))
 
 (defn move-piece
   "Changes the game state to reflect a piece's movement.  Will not deny illegal moves,
