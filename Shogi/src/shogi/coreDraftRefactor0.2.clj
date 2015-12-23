@@ -156,7 +156,7 @@
 ;; Utility Functions For Board Setup
 ;; ---------------------------------------------
 
-(declare board)
+;; (declare board)
 
 
 
@@ -187,7 +187,7 @@
     as [[x y] [x2 y2]] style list of coordinate-pairs of legal moves.
     The player parameter indicates the moving piece's owner.
     Returns a vector of available moves in the direction."
-  [[direction-x direction-y origin-x origin-y remaining player]]
+  [[board direction-x direction-y origin-x origin-y remaining player]]
   ;; If the current space is on-board, continue, else end checking in this direction.
   (if (is-on-board origin-x origin-y)
     ;; If the piece has enough movement for the distance, continue, else end
@@ -196,7 +196,7 @@
       ;;    check if it's player's or opponent's and handle:
       (if (= (get-in board [origin-x origin-y]) nil)
         (let [further-moves  (move-direction
-                               [direction-x direction-y
+                               [board direction-x direction-y
                                 (+ direction-x origin-x) (+ direction-y origin-y)
                                 (- remaining 1) player])]
              (into further-moves [[origin-x origin-y]]))
@@ -214,26 +214,26 @@
   "Function for handling the fact that this piece can move left and right,
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
-  [spaces origin-x origin-y player]
-  (let [available-moves (move-direction [-1 0 origin-x origin-y spaces player])]
-    (into [] (distinct (into (move-direction [1 0 origin-x origin-y spaces player])
+  [board spaces origin-x origin-y player]
+  (let [available-moves (move-direction [board -1 0 origin-x origin-y spaces player])]
+    (into [] (distinct (into (board move-direction [1 0 origin-x origin-y spaces player])
                              available-moves)))))
 
 (defn move-diagonal
   "Function for handling the fact that this piece can move in 4 diagonal directions,
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
-  [spaces origin-x origin-y player]
-  (let [available-moves-left (into (move-direction [-1 -1
+  [board spaces origin-x origin-y player]
+  (let [available-moves-left (into (move-direction [board -1 -1
                                                     (- origin-x 1) (- origin-y 1)
                                                     spaces player])
-                                   (move-direction [-1 1
+                                   (move-direction [board -1 1
                                                     (- origin-x 1) (+ origin-y 1)
                                                     spaces player]))
-        available-moves-right (into (move-direction [1 -1
+        available-moves-right (into (move-direction [board 1 -1
                                                      (+ origin-x 1) (- origin-y 1)
                                                      spaces player])
-                                    (move-direction [1 1
+                                    (move-direction [board 1 1
                                                      (+ origin-x 1) (+ origin-y 1)
                                                      spaces player]))]
     (into available-moves-left available-moves-right)))
@@ -242,11 +242,11 @@
   "Function for handling the fact that this piece can move in 2 diagonal directions,
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
-  [spaces origin-x origin-y player]
-  (let [available-moves-left (move-direction [-1 player
+  [board spaces origin-x origin-y player]
+  (let [available-moves-left (move-direction [board -1 player
                                               (- origin-x 1) (+ player origin-y)
                                               spaces player])
-        available-moves-right (move-direction [1 player
+        available-moves-right (move-direction [board 1 player
                                               (+ origin-x 1) (+ player origin-y)
                                                spaces player])]
     (into available-moves-left available-moves-right)))
@@ -256,23 +256,23 @@
   "Function for handling the fact that this piece can move forward (relative to owner),
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
-  [spaces origin-x origin-y player]
-  (move-direction [0 player origin-x (+ player origin-y) spaces player]))
+  [board spaces origin-x origin-y player]
+  (move-direction [board 0 player origin-x (+ player origin-y) spaces player]))
 
 (defn move-backward
   "Function for handling the fact that this piece can move backward (relative to owner),
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [spaces origin-x origin-y player]
-  (move-direction [0 (* player -1) origin-x (- origin-y player) spaces player]))
+  (move-direction [board 0 (* player -1) origin-x (- origin-y player) spaces player]))
 
 (defn move-jump
   "Function for handling Knights' ability to move by jumping to spaces.
    NOTE: the spaces parameter is kept, but not used, to ease generic movement-function calling.
    Returns a list of available jumps, or an empty vector if none are available."
-  [spaces origin-x origin-y player]
-  (into (move-direction [1 1 (+ origin-x 1) (+ origin-y (* 2 player)) 1 player])
-        (move-direction [1 1 (- origin-x 1) (+ origin-y (* 2 player)) 1 player])))
+  [board spaces origin-x origin-y player]
+  (into (move-direction [board 1 1 (+ origin-x 1) (+ origin-y (* 2 player)) 1 player])
+        (move-direction [board 1 1 (- origin-x 1) (+ origin-y (* 2 player)) 1 player])))
 
 
 
@@ -392,24 +392,26 @@
   "Function to instantiate Piece Types.  Creates the specified number of Pieces, of
    the specified Type, distributed evenly between the two players' ownership.
    NOTE: a Piece has: :owner and :type"
-  [[piece-type piece-amount]]
-  (loop [index 1]
-    (do
-      (eval `(def ~(symbol (str (piece-type :name) index)) {:owner 1 :type '~piece-type}))
-      (eval `(def ~(symbol (str (piece-type :name) (+ 1 index))) {:owner -1 :type '~piece-type}))
-      (if (< index piece-amount)
-        (recur (+ 2 index))))))
+  [[piece-type piece-amount board]]
+  (do
+    (loop [index 1]
+      (do
+        (eval `(assoc board ~(symbol (str (piece-type :name) index)) {:owner 1 :type '~piece-type}))
+        (eval `(assoc board ~(symbol (str (piece-type :name) (+ 1 index))) {:owner -1 :type '~piece-type}))
+        (if (< index piece-amount)
+          (recur (+ 2 index)))))
+    board))
 
 (defn create-mass-pieces
   "Function to call create-pieces on a list of Type-Amount pairs, suitable for
    initializing the Board at start of game."
-  [list-of-pairs]
-  (map create-pieces list-of-pairs))
+  [list-of-pairs board]
+  (reduce create-pieces list-of-pairs board))
 
 (defn initialize-pieces
   "This function creates all starting pieces at once, but they still have to be placed
    on the board."
-  []
+  [board]
   (create-mass-pieces
    [[king-type 2]
     [rook-type 2]
@@ -418,12 +420,13 @@
     [silver-general-type 4]
     [knight-type 4]
     [lance-type 4]
-    [pawn-type 18]]))
+    [pawn-type 18]]
+   board))
 
 (defn pretty-print
   "DRAFT 2: Development method for pretty-printing the board.
   This one is adjusted for the (x y) coordinate lookup system."
-  []
+  [board]
   (map (fn [arg1]
          (println (apply str
                          (map #(if (nil? (get-in board [% arg1 :type :name]))
@@ -448,94 +451,103 @@
 ;; Board Definition and Initialization:
 ;; ---------------------------------------------
 
-(declare Lance1)
-(declare Lance2)
-(declare Lance3)
-(declare Lance4)
-(declare Knight1)
-(declare Knight2)
-(declare Knight3)
-(declare Knight4)
-(declare Bishop1)
-(declare Bishop2)
-(declare SilverGeneral1)
-(declare SilverGeneral2)
-(declare SilverGeneral3)
-(declare SilverGeneral4)
-(declare GoldGeneral1)
-(declare GoldGeneral2)
-(declare GoldGeneral3)
-(declare GoldGeneral4)
-(declare King1)
-(declare King2)
-(declare Rook1)
-(declare Rook2)
-(declare Pawn1)
-(declare Pawn2)
-(declare Pawn3)
-(declare Pawn4)
-(declare Pawn5)
-(declare Pawn6)
-(declare Pawn7)
-(declare Pawn8)
-(declare Pawn9)
-(declare Pawn10)
-(declare Pawn11)
-(declare Pawn12)
-(declare Pawn13)
-(declare Pawn14)
-(declare Pawn15)
-(declare Pawn16)
-(declare Pawn17)
-(declare Pawn18)
+;; (defun declare-all
+;;   ;;Function to declare 
+;;   [board]
+;;   (declare Lance1)
+;;   (declare Lance2)
+;;   (declare Lance3)
+;;   (declare Lance4)
+;;   (declare Knight1)
+;;   (declare Knight2)
+;;   (declare Knight3)
+;;   (declare Knight4)
+;;   (declare Bishop1)
+;;   (declare Bishop2)
+;;   (declare SilverGeneral1)
+;;   (declare SilverGeneral2)
+;;   (declare SilverGeneral3)
+;;   (declare SilverGeneral4)
+;;   (declare GoldGeneral1)
+;;   (declare GoldGeneral2)
+;;   (declare GoldGeneral3)
+;;   (declare GoldGeneral4)
+;;   (declare King1)
+;;   (declare King2)
+;;   (declare Rook1)
+;;   (declare Rook2)
+;;   (declare Pawn1)
+;;   (declare Pawn2)
+;;   (declare Pawn3)
+;;   (declare Pawn4)
+;;   (declare Pawn5)
+;;   (declare Pawn6)
+;;   (declare Pawn7)
+;;   (declare Pawn8)
+;;   (declare Pawn9)
+;;   (declare Pawn10)
+;;   (declare Pawn11)
+;;   (declare Pawn12)
+;;   (declare Pawn13)
+;;   (declare Pawn14)
+;;   (declare Pawn15)
+;;   (declare Pawn16)
+;;   (declare Pawn17)
+;;   (declare Pawn18))
 
 (defn setup-board
   "Function to set up the board for the initial gamestate.  Initializes all starting pieces,
    and sets up the board with each piece in its proper starting place.
    Also defines the board object and the game which containts that board.
    Note that these are all, essentially, global variables, but also all are
-   ultimately contained, hierarchically, under the game map."
-  []
-  (do
+   ultimately contained, hierarchically, under the game map.
 
-    (def col1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
-                          8 nil  9 Lance4))
-    (def col2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4
-                          8 Bishop2 9 Knight4))
-    (def col3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6
-                          8 nil  9 SilverGeneral4))
-    (def col4 (sorted-map 1 GoldGeneral1 2 nil 3 Pawn7 4 nil 5 nil 6 nil 7 Pawn8
-                          8 nil 9 GoldGeneral2))
-    (def col5 (sorted-map 1 King1 2 nil 3 Pawn9 4 nil 5 nil 6 nil 7 Pawn10 8 nil
-                          9 King2))
-    (def col6 (sorted-map 1 GoldGeneral3 2 nil 3 Pawn11 4 nil 5 nil 6 nil 7 Pawn12
-                          8 nil 9 GoldGeneral4))
-    (def col7 (sorted-map 1 SilverGeneral3 2 nil 3 Pawn13 4 nil 5 nil 6 nil 7 Pawn14
-                          8 nil 9 SilverGeneral4))
-    (def col8 (sorted-map 1 Knight3 2 Bishop1 3 Pawn15 4 nil 5 nil 6 nil 7 Pawn16
-                          8 Rook2 9 Knight4))
-    (def col9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18
-                          8 nil 9 Lance4))
-    (def board (sorted-map 1 col1 2 col2 3 col3 4 col4 5 col5 6 col6 7 col7
-                           8 col8 9 col9))
+  Note that the piece names need never be used after declaration.  They are not any sort
+  of important state, they're just a shorthand making it easier to declare everything.
+  For debugging, you can use them to prettyprint, though.
 
-    (def hand1 [])
-    (def hand2 [])
-    (def player1 {:player -1 :hand hand1 :in-check? false})
-    (def player2 {:player 1 :hand hand2 :in-check? false})
-    (def turn player1)
+  edit 22Dec2015: Attempting to make entirely functional.  Call it using: (setup-board {})"
+  [game]
+  ;;  (declare-all board)
+  (assoc game
+         :turn player1
+         1 player2
+         -1 player1
+         player2 {:player 1 :hand hand2 :in-check? false}
+         player1 {:player -1 :hand hand1 :in-check? false}
+         hand2 []
+         hand1 []
+         :board (let [board (hash-map)]
+           (initialize-pieces board)
+           (assoc board
+                  1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
+                                8 nil  9 Lance4)
+                  2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4
+                                8 Bishop2 9 Knight4)
+                  3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6
+                                8 nil  9 SilverGeneral4)
+                  4 (sorted-map 1 GoldGeneral1 2 nil 3 Pawn7 4 nil 5 nil 6 nil 7 Pawn8
+                                8 nil 9 GoldGeneral2)
+                  5 (sorted-map 1 King1 2 nil 3 Pawn9 4 nil 5 nil 6 nil 7 Pawn10 8 nil
+                                9 King2)
+                  6 (sorted-map 1 GoldGeneral3 2 nil 3 Pawn11 4 nil 5 nil 6 nil 7 Pawn12
+                                8 nil 9 GoldGeneral4)
+                  7 (sorted-map 1 SilverGeneral3 2 nil 3 Pawn13 4 nil 5 nil 6 nil 7 Pawn14
+                                8 nil 9 SilverGeneral4)
+                  8 (sorted-map 1 Knight3 2 Bishop1 3 Pawn15 4 nil 5 nil 6 nil 7 Pawn16
+                                8 Rook2 9 Knight4)
+                  9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18
+                                8 nil 9 Lance4)))))
 
-    (def game (hash-map :board board :turn turn -1 player1 1 player2))
-
-    (initialize-pieces)))
 
 
+;; ------------------Refactored  to purely functional up to here----------------------
 
 (defn update-game
   "IMPORTANT: This function can be called at any time to update the game object to store the
    current state of the board, player-hands, turn counter, etc.
   THIS MUST BE CALLED AFTER EVERY TURN, before storing the game to JSON!"
-  []
+  [board]
   (def game (hash-map :board board :turn turn -1 player1 1 player2)))
 
 
@@ -731,11 +743,11 @@
 ;;                            later usage.
 (defn board-to-json
   "Uses Cheshire's encode [== generate-string] to encode the state of the board to JSON"
-  [] (encode board))
+  [board] (encode board))
 
 (defn game-to-json
   "Uses Cheshire's encode [== generate-string] to encode the full game state to JSON"
-  [] (encode board))
+  [board] (encode board))
 
 
 (defn save-move [move-list from-x from-y to-x to-y promote]
