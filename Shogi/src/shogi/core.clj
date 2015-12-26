@@ -615,9 +615,9 @@
   "Quick utility function to return a reference to the actual Player map opposite the parameter
    Player. Useful for quickly obtaining the other player's Hand."
   [player]
-  (if (= player (player1 :player))
-    player2
-    player1))
+  (if (= player 1)
+    -1
+    1))
 
 (defn query-all-moves
   "DRAFT: function to aggregate all open moves from all movement methods of
@@ -690,7 +690,7 @@
    TODO LATER: De-promote as well.
                Test more thoroughly, particularly that both game and board update properly."
   [game captured-x captured-y]
-  (if (= (get-in game [board captured-x captured-y :owner]) 1)
+  (if (= (get-in game [:board captured-x captured-y :owner]) 1)
     (assoc-in (assoc-in game [-1 :hand (count (get-in game [-1 :hand]))]
                         (get-in (assoc-in game [:board captured-x captured-y :owner] -1)
                                 [:board captured-x captured-y]))
@@ -1021,13 +1021,18 @@
   (is (= (move-jump (get (setup-board) :board) 9 3 3 1)
          [[4 5] [2 5]])))
 
+
+
+;;(deftest test-queries
 ;;(is (=
 ;; (with-out-str (println (doall (query-all-moves-for-player 1))))
 ;; "([1 4] [2 4] [3 4] [4 4] [5 4] [6 4] [7 4] [8 4] [9 4] [9 2] [6 2] [7 2] [5 2] [4 2] [3 2] [1 2])\n"))
-
+;;
 ;; (is (=
 ;; (with-out-str (println (doall (query-all-moves-for-player -1))))
-;; "([9 6] [8 6] [7 6] [6 6] [5 6] [4 6] [3 6] [2 6] [1 6] [9 8] [6 8] [7 8] [5 8] [4 8] [3 8] [1 8])\n")))
+;; "([9 6] [8 6] [7 6] [6 6] [5 6] [4 6] [3 6] [2 6] [1 6] [9 8] [6 8] [7 8] [5 8] [4 8] [3 8] [1 8])\n"))))
+
+
 
 (deftest test-capture
   (is (= (count (get-in (capture-piece (setup-board) 1 9) [1 :hand])) 1))
