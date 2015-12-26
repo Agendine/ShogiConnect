@@ -213,6 +213,24 @@
 ;;       [])
 ;;     []))
 
+;; (defn move-direction
+;;   [board direction-x direction-y origin-x origin-y remaining player]
+;;   ;; If the current space is on-board, continue, else end checking in this direction.
+;;   (if (is-on-board origin-x origin-y)
+;;     ;; If the piece has enough movement for the distance, continue, else end
+;;     (if (< 0 remaining)
+;;       ;; If the current space is unoccupied, then proceed on this direction
+;;       (if (= (get-in board [origin-x origin-y]) nil)
+;;         (into (move-direction board direction-x direction-y
+;;                                (+ direction-x origin-x) (+ direction-y origin-y)
+;;                                (- remaining 1) player) [[origin-x origin-y]]))
+;;         ;; If the space is occupied by Player's Piece, stop checking this direction
+;;         (if (= (get-in board [origin-x origin-y :owner]) player)
+;;           []
+;;           [[origin-x origin-y]]))
+;;       [])
+;;     [])
+
 (defn move-direction
   "Quick implementation for the logic of generic movement in a direction, called recursively.
     Actually just tests if the current space is a semi-legal move, and if so whether to
@@ -224,89 +242,153 @@
     as [[x y] [x2 y2]] style list of coordinate-pairs of legal moves.
     The player parameter indicates the moving piece's owner.
     Returns a vector of available moves in the direction."
-  [[oard direction-x direction-y origin-x origin-y remaining player]]
+  [board direction-x direction-y origin-x origin-y remaining player]
   ;; If the current space is on-board, continue, else end checking in this direction.
   (if (is-on-board origin-x origin-y)
     ;; If the piece has enough movement for the distance, continue, else end
     (if (< 0 remaining)
       ;; If the current space is unoccupied, then proceed on this direction
       (if (= (get-in board [origin-x origin-y]) nil)
-        (into (move-direction [board direction-x direction-y
-                               (+ direction-x origin-x) (+ direction-y origin-y)
-                               (- remaining 1) player]) [[origin-x origin-y]]))
+        (into (move-direction board direction-x direction-y
+                              (+ direction-x origin-x) (+ direction-y origin-y)
+                              (- remaining 1) player) [[origin-x origin-y]])
         ;; If the space is occupied by Player's Piece, stop checking this direction
         (if (= (get-in board [origin-x origin-y :owner]) player)
           []
           [[origin-x origin-y]]))
       [])
-    [])
-
-
+    []))
+;; 
+;; (defn move-horizontal
+;;   "Function for handling the fact that this piece can move left and right,
+;;    with single-space or full-board movement determined by the value of the spaces variable
+;;    Returns a list of available moves, or an empty vector if none exist."
+;;   [board spaces origin-x origin-y player]
+;;   (let [available-moves (move-direction [board -1 0 origin-x origin-y spaces player])]
+;;     (into [] (distinct (into (board move-direction [1 0 origin-x origin-y spaces player])
+;;                              available-moves)))))
 
 (defn move-horizontal
   "Function for handling the fact that this piece can move left and right,
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [board spaces origin-x origin-y player]
-  (let [available-moves (move-direction [board -1 0 origin-x origin-y spaces player])]
-    (into [] (distinct (into (board move-direction [1 0 origin-x origin-y spaces player])
+  (let [available-moves (move-direction board -1 0 origin-x origin-y spaces player)]
+    (into [] (distinct (into (move-direction board 1 0 origin-x origin-y spaces player)
                              available-moves)))))
+
+;; 
+;; (defn move-diagonal
+;;   "Function for handling the fact that this piece can move in 4 diagonal directions,
+;;    with single-space or full-board movement determined by the value of the spaces variable
+;;    Returns a list of available moves, or an empty vector if none exist."
+;;   [board spaces origin-x origin-y player]
+;;   (let [available-moves-left (into (move-direction [board -1 -1
+;;                                                     (- origin-x 1) (- origin-y 1)
+;;                                                     spaces player])
+;;                                    (move-direction [board -1 1
+;;                                                     (- origin-x 1) (+ origin-y 1)
+;;                                                     spaces player]))
+;;         available-moves-right (into (move-direction [board 1 -1
+;;                                                      (+ origin-x 1) (- origin-y 1)
+;;                                                      spaces player])
+;;                                     (move-direction [board 1 1
+;;                                                      (+ origin-x 1) (+ origin-y 1)
+;;                                                      spaces player]))]
+;;     (into available-moves-left available-moves-right)))
 
 (defn move-diagonal
   "Function for handling the fact that this piece can move in 4 diagonal directions,
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [board spaces origin-x origin-y player]
-  (let [available-moves-left (into (move-direction [board -1 -1
+  (let [available-moves-left (into (move-direction board -1 -1
                                                     (- origin-x 1) (- origin-y 1)
-                                                    spaces player])
-                                   (move-direction [board -1 1
+                                                    spaces player)
+                                   (move-direction board -1 1
                                                     (- origin-x 1) (+ origin-y 1)
-                                                    spaces player]))
-        available-moves-right (into (move-direction [board 1 -1
+                                                    spaces player))
+        available-moves-right (into (move-direction board 1 -1
                                                      (+ origin-x 1) (- origin-y 1)
-                                                     spaces player])
-                                    (move-direction [board 1 1
+                                                     spaces player)
+                                    (move-direction board 1 1
                                                      (+ origin-x 1) (+ origin-y 1)
-                                                     spaces player]))]
+                                                     spaces player))]
     (into available-moves-left available-moves-right)))
+
+;; 
+;; (defn move-diagonal-forward
+;;   "Function for handling the fact that this piece can move in 2 diagonal directions,
+;;    with single-space or full-board movement determined by the value of the spaces variable
+;;    Returns a list of available moves, or an empty vector if none exist."
+;;   [board spaces origin-x origin-y player]
+;;   (let [available-moves-left (move-direction [board -1 player
+;;                                               (- origin-x 1) (+ player origin-y)
+;;                                               spaces player])
+;;         available-moves-right (move-direction [board 1 player
+;;                                               (+ origin-x 1) (+ player origin-y)
+;;                                                spaces player])]
+;;     (into available-moves-left available-moves-right)))
 
 (defn move-diagonal-forward
   "Function for handling the fact that this piece can move in 2 diagonal directions,
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [board spaces origin-x origin-y player]
-  (let [available-moves-left (move-direction [board -1 player
-                                              (- origin-x 1) (+ player origin-y)
-                                              spaces player])
-        available-moves-right (move-direction [board 1 player
+  (let [available-moves-left (move-direction board -1 player
+                                             (- origin-x 1) (+ player origin-y)
+                                             spaces player)
+        available-moves-right (move-direction board 1 player
                                               (+ origin-x 1) (+ player origin-y)
-                                               spaces player])]
+                                              spaces player)]
     (into available-moves-left available-moves-right)))
 
+;; 
+;; (defn move-forward
+;;   "Function for handling the fact that this piece can move forward (relative to owner),
+;;    with single-space or full-board movement determined by the value of the spaces variable
+;;    Returns a list of available moves, or an empty vector if none exist."
+;;   [board spaces origin-x origin-y player]
+;;   (move-direction [board 0 player origin-x (+ player origin-y) spaces player]))
 
 (defn move-forward
   "Function for handling the fact that this piece can move forward (relative to owner),
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [board spaces origin-x origin-y player]
-  (move-direction [board 0 player origin-x (+ player origin-y) spaces player]))
+  (move-direction board 0 player origin-x (+ player origin-y) spaces player))
+
+;; 
+;; (defn move-backward
+;;   "Function for handling the fact that this piece can move backward (relative to owner),
+;;    with single-space or full-board movement determined by the value of the spaces variable
+;;    Returns a list of available moves, or an empty vector if none exist."
+;;   [board spaces origin-x origin-y player]
+;;   (move-direction [board 0 (* player -1) origin-x (- origin-y player) spaces player]))
 
 (defn move-backward
   "Function for handling the fact that this piece can move backward (relative to owner),
    with single-space or full-board movement determined by the value of the spaces variable
    Returns a list of available moves, or an empty vector if none exist."
   [board spaces origin-x origin-y player]
-  (move-direction [board 0 (* player -1) origin-x (- origin-y player) spaces player]))
+  (move-direction board 0 (* player -1) origin-x (- origin-y player) spaces player))
+
+;; 
+;; (defn move-jump
+;;   "Function for handling Knights' ability to move by jumping to spaces.
+;;    NOTE: the spaces parameter is kept, but not used, to ease generic movement-function calling.
+;;    Returns a list of available jumps, or an empty vector if none are available."
+;;   [board spaces origin-x origin-y player]
+;;   (into (move-direction [board 1 1 (+ origin-x 1) (+ origin-y (* 2 player)) 1 player])
+;;         (move-direction [board 1 1 (- origin-x 1) (+ origin-y (* 2 player)) 1 player])))
 
 (defn move-jump
   "Function for handling Knights' ability to move by jumping to spaces.
    NOTE: the spaces parameter is kept, but not used, to ease generic movement-function calling.
    Returns a list of available jumps, or an empty vector if none are available."
   [board spaces origin-x origin-y player]
-  (into (move-direction [board 1 1 (+ origin-x 1) (+ origin-y (* 2 player)) 1 player])
-        (move-direction [board 1 1 (- origin-x 1) (+ origin-y (* 2 player)) 1 player])))
-
+  (into (move-direction board 1 1 (+ origin-x 1) (+ origin-y (* 2 player)) 1 player)
+        (move-direction board 1 1 (- origin-x 1) (+ origin-y (* 2 player)) 1 player)))
 
 
 ;; *****************************************************************************************
