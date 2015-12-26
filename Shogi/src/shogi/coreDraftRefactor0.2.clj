@@ -757,6 +757,23 @@
 ;; [:fromX :fromY :toX :toY] tuples.  Note that :fromX = -1 yields "from player1's hand"
 ;; and :fromX = -2 yields "from player2's hand"
 
+(defn take-turn
+  "DRAFT: Function to take the parsed version of a turn and conduct the
+          logic of a turn on it.  If the parse says it's a drop, it drops the piece
+          from the specified hand/hand-position 
+          [to-x, -1==drop from p1, -2==drop from p2, to-y becomes hand-position].
+          If not, then it treats it as a move, with a capture as well if the
+          destination is occupied.
+          Clearly, the logic is primitive.  It doesn't error handle, and it doesn't
+          check move legality."
+  [game from-x from-y to-x to-y]
+  (if (= from-x -1)
+    (drop-piece game -1 from-y to-x to-y)
+    (if (= from-x -2)
+      (drop-piece game 1 from-y to-x to-y)
+      (if (not (= (get-in game [:board to-x to-y]) nil))
+        (move-piece (capture-piece game to-x to-y)
+                    from-x from-y to-x to-y)))))
 
 
 ;; *****************************************************************************************
