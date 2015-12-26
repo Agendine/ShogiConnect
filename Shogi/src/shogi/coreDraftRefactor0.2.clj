@@ -456,12 +456,12 @@
 (defn pretty-print
   "DRAFT 2: Development method for pretty-printing the board.
   This one is adjusted for the (x y) coordinate lookup system."
-  [board]
+  [game]
   (map (fn [arg1]
          (println (apply str
-                         (map #(if (nil? (get-in board [% arg1 :type :name]))
+                         (map #(if (nil? (get-in game [:board % arg1 :type :name]))
                                  (str "     | ")
-                                 (str (get-in board [% arg1 :type :name]) " | "))
+                                 (str (get-in game [:board % arg1 :type :name]) " | "))
                               (range 1 10)))))
        (reverse (range 1 10))))
 
@@ -523,10 +523,10 @@
                                          8 nil 9 Lance4))))))
 
 
-
- ;; *****************************************************************************************
-;; Movement:
 ;; *****************************************************************************************
+;; Game Queries:
+;; *****************************************************************************************
+
 
 (defn get-other-player
   "Quick utility function to return a reference to the actual Player map opposite the parameter
@@ -549,24 +549,27 @@
                           (get-in board [piece-x piece-y :type :moves])))))
 
 (defn query-all-moves-for-player
-  "Function aggregates all possible spaces to which the parameter player's pieces could move
-  semi-legally.
-  NOTE THAT THIS IS RAW DATA!  Secondary-rules violations, such as moving into check, are NOT checked
-  at this stage.  All moves in the output vector are distinct, but are not matched to any particular
-  moving piece."
+  "Function aggregates all possible spaces to which the parameter player's
+  pieces could move semi-legally. NOTE THAT THIS IS RAW DATA!
+  Secondary-rules violations, such as moving into check, are NOT checked
+  at this stage.  All moves in the output vector are distinct, but are
+  not matched to any particular moving piece."
  [board player]
-  (remove #(= [] %) (distinct
-                     (reduce into
-                             (map (fn [y-coord]
-                                    (reduce into (map
-                                                  (fn [x-coord] (if (= (get-in board [x-coord
-                                                                                      y-coord
-                                                                                      :owner])
-                                                                       player)
-                                                                  (query-all-moves board x-coord y-coord)
-                                                                  []))
-                                                  (range 1 10))))
-                                  (range 1 10))))))
+ (remove #(= [] %)
+         (distinct
+          (reduce into
+                  (map (fn [y-coord]
+                         (reduce into (map
+                                       (fn [x-coord] (if (= (get-in board [x-coord
+                                                                           y-coord
+                                                                           :owner])
+                                                            player)
+                                                       (query-all-moves board
+                                                                        x-coord
+                                                                        y-coord)
+                                                       []))
+                                       (range 1 10))))
+                       (range 1 10))))))
 
 (defn is-space-reachable-by-player?
   "Returns boolean result for whether any of the specified player's pieces could semi-legally
@@ -580,72 +583,21 @@
   [board from-x from-y to-x to-y]
   (some #(= [to-x to-y] %) (query-all-moves board from-x from-y)))
 
-;; (defn capture-piece
-;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece.  Only call this function when capture
-;;                has already been verified for legality.  This function assumes that the proper
-;;                player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;   [game captured-x captured-y]
-;;   (if (= (get-in game [board captured-x captured-y :owner]) 1)
-;;     (assoc-in (assoc-in game [:board captured-x captured-y :owner] -1)
-;;               [player1 :hand] (get-in game [:board captured-x captured-y]))
-;;     (assoc-in (assoc-in game [:board captured-x captured-y :owner] 1)
-;;             [player1 :hand] (get-in game [:board captured-x captured-y]))))
-;; 
-;; (defn capture-piece
-;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece.  Only call this function when capture
-;;                has already been verified for legality.  This function assumes that the proper
-;;                player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;   [game captured-x captured-y]
-;;   (if (= (get-in game [board captured-x captured-y :owner]) 1)
-;;     (assoc-in (assoc-in game [:board captured-x captured-y :owner] -1)
-;;               [player1 :hand (count (get-in game [player1 :hand]))]
-;;               (get-in game [:board captured-x captured-y]))
-;;     (assoc-in (assoc-in game [:board captured-x captured-y :owner] 1)
-;;               [player2 :hand (count (get-in game [player2 :hand]))]
-;;               (get-in game [:board captured-x captured-y]))))
-;; 
-;; 
-;; (defn capture-piece
-;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece.  Only call this function when capture
-;;                has already been verified for legality.  This function assumes that the proper
-;;                player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;   [game captured-x captured-y]
-;;   (if (= (get-in game [board captured-x captured-y :owner]) 1)
-;;     (assoc-in (assoc-in game [player1 :hand (count (get-in game [player1 :hand]))]
-;;                         (get-in (assoc-in game [:board captured-x captured-y :owner] -1)
-;;                                 [:board captured-x captured-y]))
-;;               [:board captured-x captured-y] nil)
-;;     (assoc-in (assoc-in game [player2 :hand (count (get-in game [player2 :hand]))]
-;;                         (get-in (assoc-in game [:board captured-x captured-y :owner] 1)
-;;                                 [:board captured-x captured-y]))
-;;               [:board captured-x captured-y] nil)))
-;; 
-;; (defn capture-piece
-;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
-;;                and exchanging ownership of the piece, while setting it's original board space
-;;                to nil.  Only call this function when capture has already been verified for
-;;                legality.  This function assumes that the proper player is performing the capture.
-;;    TODO LATER: De-promote as well.
-;;                Test more thoroughly, particularly that both game and board update properly."
-;;   [game captured-x captured-y]
-;;   (if (= (get-in game [board captured-x captured-y :owner]) 1)
-;;     (assoc-in (assoc-in game [player1 :hand (count (get-in game [player1 :hand]))]
-;;                         (get-in (assoc-in game [:board captured-x captured-y :owner] -1)
-;;                                 [:board captured-x captured-y]))
-;;               [:board captured-x captured-y] nil)
-;;     (assoc-in (assoc-in game [player2 :hand (count (get-in game [player2 :hand]))]
-;;                         (get-in (assoc-in game [:board captured-x captured-y :owner] 1)
-;;                                 [:board captured-x captured-y]))
-;;               [:board captured-x captured-y] nil)))
+(defn locate-king
+  "DRAFT: utility function which outputs an [x y] coordinate vector containing the location
+  of the specified player's king."
+  [board player]
+  (first
+   (for [x (range 1 10) y (range 1 10)
+         :let [coords [x y]]
+         :when (and (= (get-in board [x y :type :name]) "King")
+                    (= (get-in board [x y :owner]) player))]
+     coords)))
+
+
+;; *****************************************************************************************
+;; Movement:
+;; *****************************************************************************************
 
 (defn capture-piece
   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
@@ -674,20 +626,6 @@
   (assoc-in (assoc-in game [:board to-x to-y] (get-in game [:board from-x from-y]))
             [:board from-x from-y] nil))
 
-;; 
-;; (defn drop-test
-;;   "DRAFT: Conducts a drop instead of a movement, removing the piece specified
-;;           by player and hand-position from that hand, and putting it on the board
-;;           at [to-x to-y]. Only call this function when the drop has already been
-;;           verified for legality."
-;;   [game player hand-pos to-x to-y]
-;;   (dissoc-in (assoc-in game [:board to-x to-y]
-;;                        (get-in game [player :hand hand-pos]))
-;;              [player :hand hand-pos]))
-;;
-;; (defn drop2 [game player hand-pos]
-;;   (dissoc-in game [player :hand  hand-pos]))
-
 (defn drop-piece
   "DRAFT: Conducts a drop instead of a movement, removing the piece specified
           by player and hand-position from that hand, and putting it on the board
@@ -698,19 +636,31 @@
                        (get-in game [player :hand hand-pos]))
              [player :hand  hand-pos]))
 
+
+;; TO DO:
+;;        Query-all-in-hand
+;;              ~for purposes of JSONification
+;;        Promotions
+;;             -isInPromotionZone
+;;             -handlePromotion
+;;             --ensure pieces aren't dropped into promotion or checkmate
+;;        Turn advancement and enforcement.
+;;             --checkmate compliances
+;;        More thorough testing.
+
+
+
+;; *****************************************************************************************
+;; Legality Checks:
+;; *****************************************************************************************
+
+
+
+;;                   *******************************************
 ;; ------------------Refactored  to purely functional up to here----------------------
+;;                   *******************************************
 
 
-(defn locate-king
-  "DRAFT: utility function which outputs an [x y] coordinate vector containing the location
-  of the specified player's king."
-  [board player]
-  (first
-   (for [x (range 1 10) y (range 1 10)
-         :let [coords [x y]]
-         :when (and (= (get-in board [x y :type :name]) "King")
-                    (= (get-in board [x y :owner]) player))]
-     coords)))
 
 (defn is-in-check?
   "TESTING: DRAFT: simple boolean result for whether any of the opposing player's pieces have
@@ -725,23 +675,19 @@
 
 (defn is-in-checkmate?
   "TESTING: DRAFT: Simple boolean result for whether parameter player is currently in checkmate.
-  TODO: Expand the search for moves which could displace check beyond just the king itself.
-        Check for move repetition for stalemate."
+   TODO: Expand the search for moves which could displace check beyond just the king itself.
+         Check for move repetition for stalemate."
   [board player]
   (let [[king-x king-y] (locate-king board player)]
-    (if (and (is-in-check? board player) (empty? (query-all-moves board king-x king-y))) (true))))
+    (if (and (is-in-check? board player) (empty? (query-all-moves board king-x king-y)))
+      (true)
+      (false))))
 
+;; "Is Legal Move"
 
-;; TO DO:
-;;        Query-all-in-hand
-;;              ~for purposes of JSONification
-;;        Promotions
-;;             -isInPromotionZone
-;;             -handlePromotion
-;;             --ensure pieces aren't dropped into promotion or checkmate
-;;        Turn advancement and enforcement.
-;;             --checkmate compliances
-;;        More thorough testing.
+;; "Is Legal Drop"
+
+;; "Is Legal Capture"
 
 
 ;; *****************************************************************************************
@@ -760,7 +706,7 @@
 (defn take-turn
   "DRAFT: Function to take the parsed version of a turn and conduct the
           logic of a turn on it.  If the parse says it's a drop, it drops the piece
-          from the specified hand/hand-position 
+          from the specified hand/hand-position
           [to-x, -1==drop from p1, -2==drop from p2, to-y becomes hand-position].
           If not, then it treats it as a move, with a capture as well if the
           destination is occupied.
@@ -768,13 +714,17 @@
           check move legality."
   [game from-x from-y to-x to-y]
   (if (= from-x -1)
+    ;;TODO: "IF legal-drop", else fail
     (drop-piece game -1 from-y to-x to-y)
     (if (= from-x -2)
+      ;;TODO: "IF legal-drop", else fail
       (drop-piece game 1 from-y to-x to-y)
       (if (not (= (get-in game [:board to-x to-y]) nil))
+        ;;TODO: "IF legal-capture", else fail
         (move-piece (capture-piece game to-x to-y)
-                    from-x from-y to-x to-y)))))
-
+                    from-x from-y to-x to-y)
+        ;;TODO: "IF legal-move", else fail
+        (move-piece game from-x from-y to-x to-y)))))
 
 ;; *****************************************************************************************
 ;; JSON:
