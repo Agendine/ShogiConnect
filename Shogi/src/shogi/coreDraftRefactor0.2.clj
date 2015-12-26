@@ -224,7 +224,7 @@
     as [[x y] [x2 y2]] style list of coordinate-pairs of legal moves.
     The player parameter indicates the moving piece's owner.
     Returns a vector of available moves in the direction."
-  [[board direction-x direction-y origin-x origin-y remaining player]]
+  [[oard direction-x direction-y origin-x origin-y remaining player]]
   ;; If the current space is on-board, continue, else end checking in this direction.
   (if (is-on-board origin-x origin-y)
     ;; If the piece has enough movement for the distance, continue, else end
@@ -240,6 +240,7 @@
           [[origin-x origin-y]]))
       [])
     [])
+
 
 
 (defn move-horizontal
