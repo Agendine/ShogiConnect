@@ -151,6 +151,17 @@
   "Simple predicate for comparing a value to empty"
   (false? (= val "empty")))
 
+(defn dissoc-in
+  "Dissociates an entry from a nested associative structure returning a new
+  nested structure. keys is a sequence of keys. Any empty maps that result
+  will be present in the new structure."
+  [m [k & ks :as keys]]
+  (if ks
+    (if-let [nextmap (get m k)]
+      (let [newmap (dissoc-in nextmap ks)]
+        (assoc m k newmap))
+      m)
+    (dissoc m k)))
 
 
 ;; *****************************************************************************************
@@ -487,10 +498,8 @@
   (let [game (hash-map)]
     (assoc game
            :turn player1
-           1 player2
-           -1 player1
-           player2 {:player 1 :hand {} :in-check? false}
-           player1 {:player -1 :hand {} :in-check? false}
+           1 {:player 1 :hand {} :in-check? false}
+           -1 {:player -1 :hand {} :in-check? false}
            :board (let [board (hash-map)]
                     (initialize-pieces board)
                     (assoc board
@@ -619,6 +628,24 @@
 ;;                         (get-in (assoc-in game [:board captured-x captured-y :owner] 1)
 ;;                                 [:board captured-x captured-y]))
 ;;               [:board captured-x captured-y] nil)))
+;; 
+;; (defn capture-piece
+;;   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
+;;                and exchanging ownership of the piece, while setting it's original board space
+;;                to nil.  Only call this function when capture has already been verified for
+;;                legality.  This function assumes that the proper player is performing the capture.
+;;    TODO LATER: De-promote as well.
+;;                Test more thoroughly, particularly that both game and board update properly."
+;;   [game captured-x captured-y]
+;;   (if (= (get-in game [board captured-x captured-y :owner]) 1)
+;;     (assoc-in (assoc-in game [player1 :hand (count (get-in game [player1 :hand]))]
+;;                         (get-in (assoc-in game [:board captured-x captured-y :owner] -1)
+;;                                 [:board captured-x captured-y]))
+;;               [:board captured-x captured-y] nil)
+;;     (assoc-in (assoc-in game [player2 :hand (count (get-in game [player2 :hand]))]
+;;                         (get-in (assoc-in game [:board captured-x captured-y :owner] 1)
+;;                                 [:board captured-x captured-y]))
+;;               [:board captured-x captured-y] nil)))
 
 (defn capture-piece
   "DRAFT: Conducts the actual capture of a piece, simply adding it to the attacker's hand
@@ -629,18 +656,14 @@
                Test more thoroughly, particularly that both game and board update properly."
   [game captured-x captured-y]
   (if (= (get-in game [board captured-x captured-y :owner]) 1)
-    (assoc-in (assoc-in game [player1 :hand (count (get-in game [player1 :hand]))]
+    (assoc-in (assoc-in game [-1 :hand (count (get-in game [-1 :hand]))]
                         (get-in (assoc-in game [:board captured-x captured-y :owner] -1)
                                 [:board captured-x captured-y]))
               [:board captured-x captured-y] nil)
-    (assoc-in (assoc-in game [player2 :hand (count (get-in game [player2 :hand]))]
+    (assoc-in (assoc-in game [1 :hand (count (get-in game [1 :hand]))]
                         (get-in (assoc-in game [:board captured-x captured-y :owner] 1)
                                 [:board captured-x captured-y]))
               [:board captured-x captured-y] nil)))
-
-
-
-
 
 (defn move-piece
   "Changes the game state to reflect a piece's movement.  Will not deny illegal moves,
@@ -651,6 +674,29 @@
   (assoc-in (assoc-in game [:board to-x to-y] (get-in game [:board from-x from-y]))
             [:board from-x from-y] nil))
 
+;; 
+;; (defn drop-test
+;;   "DRAFT: Conducts a drop instead of a movement, removing the piece specified
+;;           by player and hand-position from that hand, and putting it on the board
+;;           at [to-x to-y]. Only call this function when the drop has already been
+;;           verified for legality."
+;;   [game player hand-pos to-x to-y]
+;;   (dissoc-in (assoc-in game [:board to-x to-y]
+;;                        (get-in game [player :hand hand-pos]))
+;;              [player :hand hand-pos]))
+;;
+;; (defn drop2 [game player hand-pos]
+;;   (dissoc-in game [player :hand  hand-pos]))
+
+(defn drop-piece
+  "DRAFT: Conducts a drop instead of a movement, removing the piece specified
+          by player and hand-position from that hand, and putting it on the board
+          at [to-x to-y]. Only call this function when the drop has already been
+          verified for legality."
+  [game player hand-pos to-x to-y]
+  (dissoc-in (assoc-in game [:board to-x to-y]
+                       (get-in game [player :hand hand-pos]))
+             [player :hand  hand-pos]))
 
 ;; ------------------Refactored  to purely functional up to here----------------------
 
@@ -685,20 +731,6 @@
   (let [[king-x king-y] (locate-king board player)]
     (if (and (is-in-check? board player) (empty? (query-all-moves board king-x king-y))) (true))))
 
-
-(defn drop-piece
-  "DRAFT: Removes a previously captured piece from the player's hand, and places it on
-          an empty space on the boart.
-  TODO:   Solidify checks for rules compliance."
-  [piece to-x to-y player]
-  (if (nil? (get-in board [to-x to-y]))
-    (do
-      (def board
-        (assoc-in board [to-x to-y] piece))
-      (def player
-        (remove #{piece} (get-in player [:hand])))
-      (update-game))
-    (println "Illegal Drop.  Destination not empty.")))
 
 ;; TO DO:
 ;;        Query-all-in-hand
