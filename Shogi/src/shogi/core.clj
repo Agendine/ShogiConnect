@@ -565,6 +565,48 @@
 ;; ---------------------------------------------
 
 
+;; (defn setup-board
+;;   "Function to set up the board for the initial gamestate.  Initializes all starting pieces,
+;;    and sets up the board with each piece in its proper starting place.
+;;    Also defines the board object and the game which containts that board.
+;;    Note that these are all, essentially, global variables, but also all are
+;;    ultimately contained, hierarchically, under the game map.
+;; 
+;;   Note that the piece names need never be used after declaration.  They are not any sort
+;;   of important state, they're just a shorthand making it easier to declare everything.
+;;   For debugging, you can use them to prettyprint, though.
+;; 
+;;   edit 22Dec2015: Attempting to make entirely functional.  Call it using: (setup-board)"
+;;   []
+;;   (let [game (hash-map)]
+;;     (assoc game
+;;            :turn player1
+;;            1 {:player 1 :hand {} :in-check? false}
+;;            -1 {:player -1 :hand {} :in-check? false}
+;;            :board (let [board (hash-map)]
+;;                     (initialize-pieces board)
+;;                     (assoc board
+;;                            1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
+;;                                          8 nil  9 Lance4)
+;;                            2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4
+;;                                          8 Bishop2 9 Knight4)
+;;                            3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6
+;;                                          8 nil  9 SilverGeneral4)
+;;                            4 (sorted-map 1 GoldGeneral1 2 nil 3 Pawn7 4 nil 5 nil 6 nil 7 Pawn8
+;;                                          8 nil 9 GoldGeneral2)
+;;                            5 (sorted-map 1 King1 2 nil 3 Pawn9 4 nil 5 nil 6 nil 7 Pawn10 8 nil
+;;                                          9 King2)
+;;                            6 (sorted-map 1 GoldGeneral3 2 nil 3 Pawn11 4 nil 5 nil 6 nil 7 Pawn12
+;;                                          8 nil 9 GoldGeneral4)
+;;                            7 (sorted-map 1 SilverGeneral3 2 nil 3 Pawn13 4 nil 5 nil 6 nil 7 Pawn14
+;;                                          8 nil 9 SilverGeneral4)
+;;                            8 (sorted-map 1 Knight3 2 Bishop1 3 Pawn15 4 nil 5 nil 6 nil 7 Pawn16
+;;                                          8 Rook2 9 Knight4)
+;;                            9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18
+;;                                          8 nil 9 Lance4))))))
+;; 
+
+
 (defn setup-board
   "Function to set up the board for the initial gamestate.  Initializes all starting pieces,
    and sets up the board with each piece in its proper starting place.
@@ -580,30 +622,52 @@
   []
   (let [game (hash-map)]
     (assoc game
-           :turn player1
+           :turn 1
            1 {:player 1 :hand {} :in-check? false}
            -1 {:player -1 :hand {} :in-check? false}
            :board (let [board (hash-map)]
                     (initialize-pieces board)
                     (assoc board
-                           1 (sorted-map 1 Lance1 2 nil 3 Pawn1 4 nil 5 nil 6 nil 7 Pawn2
-                                         8 nil  9 Lance4)
-                           2 (sorted-map 1 Knight1 2 Rook1 3 Pawn3 4 nil 5 nil 6 nil 7 Pawn4
-                                         8 Bishop2 9 Knight4)
-                           3 (sorted-map 1 SilverGeneral1 2 nil 3 Pawn5 4 nil 5 nil 6 nil 7 Pawn6
-                                         8 nil  9 SilverGeneral4)
-                           4 (sorted-map 1 GoldGeneral1 2 nil 3 Pawn7 4 nil 5 nil 6 nil 7 Pawn8
-                                         8 nil 9 GoldGeneral2)
-                           5 (sorted-map 1 King1 2 nil 3 Pawn9 4 nil 5 nil 6 nil 7 Pawn10 8 nil
-                                         9 King2)
-                           6 (sorted-map 1 GoldGeneral3 2 nil 3 Pawn11 4 nil 5 nil 6 nil 7 Pawn12
-                                         8 nil 9 GoldGeneral4)
-                           7 (sorted-map 1 SilverGeneral3 2 nil 3 Pawn13 4 nil 5 nil 6 nil 7 Pawn14
-                                         8 nil 9 SilverGeneral4)
-                           8 (sorted-map 1 Knight3 2 Bishop1 3 Pawn15 4 nil 5 nil 6 nil 7 Pawn16
-                                         8 Rook2 9 Knight4)
-                           9 (sorted-map 1 Lance3 2 nil 3 Pawn17 4 nil 5 nil 6 nil 7 Pawn18
-                                         8 nil 9 Lance4))))))
+                           1 (sorted-map 1 {:owner 1 :type lance-type} 2 nil
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type} 8 nil
+                                         9 {:owner -1 :type lance-type})
+                           2 (sorted-map 1 {:owner 1 :type knight-type}
+                                         2 {:owner 1 :type rook-type}
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type}
+                                         8 {:owner -1 :type bishop-type}
+                                         9 {:owner -1 :type knight-type})
+                           3 (sorted-map 1 {:owner 1 :type silver-general-type} 2 nil
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type} 8 nil
+                                         9 {:owner -1 :type silver-general-type})
+                           4 (sorted-map 1 {:owner 1 :type gold-general-type} 2 nil
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type} 8 nil
+                                         9 {:owner -1 :type gold-general-type})
+                           5 (sorted-map 1 {:owner 1 :type king-type} 2 nil
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type} 8 nil
+                                         9 {:owner -1 :type king-type})
+                           6 (sorted-map 1 {:owner 1 :type gold-general-type} 2 nil
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type} 8 nil
+                                         9 {:owner -1 :type gold-general-type})
+                           7 (sorted-map 1 {:owner 1 :type silver-general-type} 2 nil
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type} 8 nil
+                                         9 {:owner -1 :type silver-general-type})
+                           8 (sorted-map 1 {:owner 1 :type knight-type}
+                                         2 {:owner 1 :type bishop-type}
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type}
+                                         8 {:owner -1 :type rook-type}
+                                         9 {:owner -1 :type knight-type})
+                           9 (sorted-map 1 {:owner 1 :type lance-type} 2 nil
+                                         3 {:owner 1 :type pawn-type} 4 nil 5 nil 6 nil
+                                         7 {:owner -1 :type pawn-type} 8 nil
+                                         9 {:owner -1 :type lance-type}))))))
 
 
 ;; *****************************************************************************************
@@ -794,7 +858,8 @@
           If not, then it treats it as a move, with a capture as well if the
           destination is occupied.
           Clearly, the logic is primitive.  It doesn't error handle, and it doesn't
-          check move legality."
+          check move legality.
+          NOTE: Add promotion execution."
   [game from-x from-y to-x to-y]
   (if (= from-x -1)
     ;;TODO: "IF legal-drop", else fail
@@ -946,14 +1011,11 @@
 ;; Unit tests and supporting framework:
 ;; *****************************************************************************************
 
-(defn board-fixture [function-in]
-  (setup-board)
-  (function-in))
-
 (deftest test-setup
   (is (= (str (get-in (setup-board) [:board 3 1])
           "{:type {:is-promotable true, :moves [[move-forward 1] [move-diagonal 1]], :name \"SilverGeneral\", :promotion promoted-silver-general-type}, :owner 1}")))
-  (is (= (str King1) "{:type {:is-promotable false, :moves [[move-horizontal 1] [move-forward 1] [move-backward 1] [move-diagonal 1]], :name \"King\", :promotion king-type}, :owner 1}")))
+  (is (= (str (get-in (setup-board) [:board 5 1]))
+         "{:type {:is-promotable false, :moves [[move-horizontal 1] [move-forward 1] [move-backward 1] [move-diagonal 1]], :name \"King\", :promotion king-type}, :owner 1}")))
 
 
 (deftest test-move-queries
@@ -1031,7 +1093,9 @@
 ;; (is (=
 ;; (with-out-str (println (doall (query-all-moves-for-player -1))))
 ;; "([9 6] [8 6] [7 6] [6 6] [5 6] [4 6] [3 6] [2 6] [1 6] [9 8] [6 8] [7 8] [5 8] [4 8] [3 8] [1 8])\n"))))
-
+;;
+;; (is (= (locate-king (get (setup-board) :board) 1) [5 1]))
+;; (is (= (locate-king (get (setup-board) :board) -1) [5 9]))
 
 
 (deftest test-capture
